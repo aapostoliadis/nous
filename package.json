@@ -4,10 +4,10 @@
   "private": true,
   "description": "An LLM-native workspace for thought",
   "engines": {
-    "node": ">=24"
+    "node": "24.x"
   },
   "scripts": {
     "start": "node app/server.cjs",
-    "test": "node tests/verify-models.cjs && node tests/verify-streaming.cjs && node tests/verify-provider-client.cjs && node tests/verify-dictation.cjs"
+    "test": "node tests/verify-models.cjs && node tests/verify-streaming.cjs && node tests/verify-provider-client.cjs && node tests/verify-dictation.cjs && node tests/verify-hosting.cjs"
   }
 }

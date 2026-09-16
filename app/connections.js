@@ -11,7 +11,7 @@
   try{Object.assign(chosenModels,JSON.parse(localStorage.getItem('nous-models')||'{}'));}catch{}
   const send=document.querySelector('#command-form button[type=submit]');
   const cancel=document.querySelector('#cancel-ask');
-  let providers=[],active=null,preferred,progress=null,checking=0;
+  let hosted=false,providers=[],active=null,preferred,progress=null,checking=0;
   const orb=document.querySelector('#connection-orb');
   function syncOrb(){orb.setAttribute('state',active?'working':'connecting');orb.hidden=!active&&!checking&&!modelsLoading;}
   window.renderModelProgress=()=>progress&&progress.branch===state.branch?`<section class="model-progress" aria-label="Answer in progress"><div class="inspector-eyebrow">THINKING WITH ${esc(progress.label)}</div><div class="stream-status"><nous-orb state="working" size="24"></nous-orb><span role="status">${progress.answer?'Writing your answer…':'Working through your request…'}</span></div><p class="ask-query">${esc(progress.prompt)}</p><p class="inspector-body ask-answer model-stream-answer">${esc(progress.answer||'')}</p><p class="source-note">${progress.answer?'Answer in progress. Workspace changes appear when complete.':'Using this branch’s goal, constraints and linked objects.'}</p></section>`:'';
@@ -49,7 +49,7 @@
   }
   async function refresh() {
     checking++;syncOrb();
-    try{const r=await fetch('/api/providers');if(!r.ok)throw Error();providers=(await r.json()).providers;if(!active){describe();await loadModels(false);}}
+    try{const r=await fetch('/api/providers');if(!r.ok)throw Error();const data=await r.json();providers=data.providers;hosted=data.hosted===true;if(!active){describe();await loadModels(false);}}
     catch{if(!active)connection.textContent='Restart Nous to enable connections';}
     finally{checking--;syncOrb();}
   }
@@ -77,7 +77,8 @@
   refreshModels.onclick=()=>loadModels(true);
   selector.onchange=()=>{try{localStorage.setItem('nous-provider',selector.value);}catch{}loadModels(false);};
   document.querySelector('#connections').onclick=()=>{
-    modal(`<h2>Your thinking partners.</h2><p>Choose a provider and model beside the Ask field. Models come from your API account; availability differs from the ChatGPT and Claude apps. Your request, shared goal, constraints and current branch objects are sent to that provider.</p>${providers.map(p=>`<div class="connection-card"><strong>${esc(p.label)}</strong><span>${p.configured?'API key configured':'API key needed'}</span><small>${esc(chosenModels[p.id]||p.model)}</small></div>`).join('')}<p>API usage uses each provider’s API billing. Responses become linked drafts; model output is not verified evidence. Original objects and decision states stay intact.</p><p class="source-note">Credentials are stored on this computer, outside the exported prototype. Claude setup requires an Anthropic API key.</p><div class="dialog-actions"><button type="button" id="refresh-connections">Refresh status</button><button data-cancel class="primary">Done</button></div>`);
+    modal(`<h2>Your thinking partners.</h2><p>Choose a provider and model beside the Ask field. Models come from your API account; availability differs from the ChatGPT and Claude apps. Your request, shared goal, constraints and current branch objects are sent to that provider.</p>${providers.map(p=>`<div class="connection-card"><strong>${esc(p.label)}</strong><span>${p.configured?'API key configured':'API key needed'}</span><small>${esc(chosenModels[p.id]||p.model)}</small></div>`).join('')}<p>API usage uses each provider’s API billing. Responses become linked drafts; model output is not verified evidence. Original objects and decision states stay intact.</p><p class="source-note">${hosted?'Hosted credentials are managed by the deployment owner in Vercel environment settings.':'Credentials are stored on this computer, outside the exported prototype. Claude setup requires an Anthropic API key.'}</p><div class="dialog-actions"><button type="button" id="refresh-connections">Refresh status</button><button data-cancel class="primary">Done</button></div>`);
+    if(!hosted){
     const setup=document.createElement('form');
     setup.id='claude-key-form';
     setup.innerHTML='<label>Claude API key<input type="password" name="anthropic-key" aria-label="Claude API key" autocomplete="off" spellcheck="false" required placeholder="Paste your new Claude key here"></label><p class="source-note">Save to this workspace’s .env.local file as ANTHROPIC_API_KEY. Stored on this computer only; never included in exports.</p><button class="primary" type="submit">Save Claude key locally</button><p id="key-save-status" role="status"></p>';
@@ -89,6 +90,7 @@
       catch(e){field.value='';feedback.textContent=e.message||'Could not save the key.';}
       finally{button.disabled=false;button.textContent='Save Claude key locally';setup.setAttribute('aria-busy','false');}
     };
+    }
     document.querySelector('#refresh-connections').onclick=async event=>{const button=event.currentTarget;button.disabled=true;button.innerHTML='<nous-orb state="connecting" size="20"></nous-orb> Checking…';modelCatalogs.clear();await refresh();if(button.isConnected&&document.querySelector('#dialog').open){document.querySelector('#dialog').close();document.querySelector('#connections').click();}};
   };
   function snapshot(){return JSON.stringify({goal:state.goal,constraints:state.constraints,objects:current()});}

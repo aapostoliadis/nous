@@ -4,22 +4,27 @@ const path = require('node:path');
 const {status,ask,saveClaudeKey,listModels,audioRequest} = require('./providers.cjs');
 const root = __dirname;
 const port = Number(process.env.PORT || 4179);
-const hosts=new Set([`localhost:${port}`,`127.0.0.1:${port}`]);
+const hosted=process.env.VERCEL==='1';
+const hosts=new Set(hosted
+  ? [process.env.VERCEL_URL,process.env.VERCEL_PROJECT_PRODUCTION_URL,process.env.VERCEL_BRANCH_URL,...(process.env.NOUS_ALLOWED_HOSTS||'').split(',')].filter(Boolean).map(host=>host.trim().toLowerCase())
+  : [`localhost:${port}`,`127.0.0.1:${port}`]);
 const publicFiles=new Set(['index.html','app.js','ask.js','connections.js','map-fullscreen.js','style.css','kit-theme.css','dropdowns.css','map-fullscreen.css','ask.css','connections.css','thinking-orbs.js','audio-tools.js','dictation.js','ux-refinements.css','vendor/thinking-orbs/engine.es.js']);
 let busy=false;
 function json(res,code,data){res.writeHead(code,{'Content-Type':'application/json','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'});res.end(JSON.stringify(data));}
-const server=http.createServer(async(req,res)=>{
-  if(!hosts.has(req.headers.host)) return json(res,403,{error:'Local access only.'});
-  if(req.headers.origin && ![`http://localhost:${port}`,`http://127.0.0.1:${port}`].includes(req.headers.origin)) return json(res,403,{error:'Origin not allowed.'});
+async function handler(req,res){
+  const host=String(req.headers.host||'').toLowerCase();
+  if(!hosts.has(host)) return json(res,403,{error:'Host not allowed.'});
+  if(req.headers.origin && (hosted ? req.headers.origin!==`https://${host}` : ![`http://localhost:${port}`,`http://127.0.0.1:${port}`].includes(req.headers.origin))) return json(res,403,{error:'Origin not allowed.'});
   if(req.headers['sec-fetch-site']==='cross-site') return json(res,403,{error:'Origin not allowed.'});
   let url;try{url=decodeURIComponent(new URL(req.url,'http://localhost').pathname);}catch{return json(res,400,{error:'Invalid path.'});}
-  if(url==='/api/providers'&&req.method==='GET') return json(res,200,{providers:status()});
+  if(url==='/api/providers'&&req.method==='GET') return json(res,200,{providers:status(),hosted});
   if(url==='/api/models'&&req.method==='GET') {
     const params=new URL(req.url,'http://localhost').searchParams;
     try{return json(res,200,await listModels(params.get('provider'),{force:params.get('refresh')==='1'}));}
     catch(e){return json(res,e.status||502,{error:e.status?e.message:'Could not reach the model catalogue. Try refreshing.'});}
   }
   if(url==='/api/connections/anthropic'&&req.method==='POST') {
+    if(hosted) return json(res,403,{error:'Manage hosted API keys in Vercel environment settings.'});
     if(!req.headers.origin||req.headers['content-type']!=='application/json') return json(res,403,{error:'Save credentials from Nous Connections.'});
     try {
       let raw='',size=0;
@@ -59,10 +64,15 @@ const server=http.createServer(async(req,res)=>{
   if(!publicFiles.has(relative)&&!asset) return json(res,404,{error:'Not found.'});
   const file=path.resolve(root,relative);
   if(!file.startsWith(root+path.sep)) return json(res,403,{error:'Invalid path.'});
-  fs.readFile(file,(err,data)=>{if(err)return json(res,404,{error:'Not found.'});res.setHeader('Content-Type',({'html':'text/html; charset=utf-8','js':'text/javascript','css':'text/css','svg':'image/svg+xml','png':'image/png','woff2':'font/woff2'})[path.extname(file).slice(1)]);res.setHeader('Cache-Control','no-cache');res.setHeader('X-Content-Type-Options','nosniff');res.end(req.method==='HEAD'?undefined:data);});
-});
+  let data;try{data=await fs.promises.readFile(file);}catch{return json(res,404,{error:'Not found.'});}
+  res.setHeader('Content-Type',({'html':'text/html; charset=utf-8','js':'text/javascript','css':'text/css','svg':'image/svg+xml','png':'image/png','woff2':'font/woff2'})[path.extname(file).slice(1)]);res.setHeader('Cache-Control','no-cache');res.setHeader('X-Content-Type-Options','nosniff');res.end(req.method==='HEAD'?undefined:data);
+}
+module.exports=handler;
+if(require.main===module){
+const server=http.createServer(handler);
 server.requestTimeout=100000;
 server.listen(port,'127.0.0.1',()=>{
   console.log(`Nous is running at http://localhost:${port}`);
   if(process.argv.includes('--open')&&process.platform==='win32') require('node:child_process').execFile('cmd.exe',['/c','start','','http://localhost:'+port]);
 });
+}

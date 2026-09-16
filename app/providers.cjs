@@ -5,7 +5,7 @@ const { createHash } = require('node:crypto');
 const envPath = path.resolve(__dirname, '../.env.local');
 function config() {
   let local = {};
-  try { local = parseEnv(fs.readFileSync(envPath, 'utf8')); } catch (e) { if (e.code !== 'ENOENT') throw e; }
+  try { if(process.env.VERCEL!=='1') local = parseEnv(fs.readFileSync(envPath, 'utf8')); } catch (e) { if (e.code !== 'ENOENT') throw e; }
   return { ...local, ...process.env };
 }
 const providers = {
