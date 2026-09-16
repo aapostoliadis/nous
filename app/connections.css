@@ -1,0 +1,32 @@
+.provider-controls{display:flex;align-items:center;gap:10px;margin-left:auto}
+.provider-controls select{font:600 12px Inter,sans-serif;color:#28563f;background:#eef3ef;border:1px solid #d7e3da;border-radius:18px;padding:7px 12px;min-width:145px;cursor:pointer}
+#connection-status{font-size:10px;color:#64666e}
+#connections{font-size:11px;color:#28563f;text-decoration:underline;text-underline-offset:3px}
+#cancel-ask{font-size:11px;color:#64666e}
+#cancel-ask[hidden]{display:none}
+#command-form[aria-busy=true]{border-color:#90b49d}
+#command-form button:disabled{opacity:.5;cursor:wait}
+.connection-card{border:1px solid #e0e6e2;border-radius:18px;padding:16px;margin:12px 0;display:grid;grid-template-columns:1fr auto;gap:6px}
+.connection-card small{color:#64666e;grid-column:1/-1}
+.connection-card span{font-size:12px;color:#28563f}
+.ask-status.error{background:#fff0e9;color:#974827}
+nous-orb{display:inline-flex;align-items:center;justify-content:center;flex:none;width:20px;height:20px;vertical-align:middle}
+nous-orb[hidden]{display:none}
+nous-orb[size="64"]{width:64px;height:64px}
+nous-orb canvas{display:block}
+#connection-orb{margin-right:-5px}
+.model-progress>nous-orb{margin:26px 0 20px}
+.model-progress .inspector-title{margin-top:0}
+.model-progress .ask-query{margin:18px 0;max-height:130px;overflow:auto}
+#claude-key-form button,#refresh-connections{display:inline-flex;align-items:center;justify-content:center;gap:8px}
+.command-context{flex-wrap:wrap}
+.provider-controls{flex-wrap:wrap;justify-content:flex-end;max-width:100%}
+#ai-model{max-width:240px;min-width:155px}
+#ai-model[hidden],#refresh-models[hidden]{display:none}
+#refresh-models{font-size:18px;width:26px;height:26px;border-radius:50%;color:#28563f;flex:none}
+#refresh-models:hover{background:#e9f1ed}
+#connection-status{max-width:240px;overflow-wrap:anywhere}
+@media(max-width:850px){.provider-controls{justify-content:flex-start}#ai-model{max-width:calc(100vw - 205px);min-width:120px;flex:1}#connection-status{max-width:100%;min-width:45px}}
+@media(max-width:850px){.command-context{flex-wrap:wrap;gap:8px}.provider-controls{width:100%;margin-left:0;flex-wrap:wrap}#connection-status{flex:1}.provider-controls select{min-width:130px}}
+
+.stream-status{display:flex;align-items:center;gap:10px;margin:22px 0;color:#295b44;font-size:13px}.model-stream-answer{white-space:pre-wrap;overflow-wrap:anywhere}.model-stream-answer:empty{display:none}

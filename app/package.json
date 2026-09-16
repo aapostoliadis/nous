@@ -1,0 +1,1 @@
+{"name":"nous-llm-native-prototype","version":"1.0.0","private":true,"description":"A local, model-agnostic workspace concept","scripts":{"start":"node server.cjs"}}

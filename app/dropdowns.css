@@ -1,0 +1,22 @@
+/* Keep native selection, forms and keyboard handling; theme the field and picker. */
+select{font-family:var(--sans);color:var(--ink);cursor:pointer}
+.surface-heading select{border:1px solid #e3e5e9;border-radius:99px;padding:9px 13px;background:#fff;font-size:11px;max-width:240px}
+.inspector-state,dialog select{border:1px solid #e3e5e9;border-radius:14px;padding:11px 14px;background:#fff;color:var(--ink);font-size:12px}
+select:hover{border-color:#bdd0c6;background-color:#fafcfb}
+select:focus-visible{outline:2px solid #739981;outline-offset:3px}
+@supports (appearance:base-select){
+ select,select::picker(select){appearance:base-select}
+ select,.surface-heading select,.inspector-state,dialog select{display:inline-flex;align-items:center;justify-content:space-between;gap:14px}
+ select:open{border-color:#91b7a3;box-shadow:0 0 0 3px #295b440a}
+ select::picker-icon{content:'';width:14px;height:14px;flex-shrink:0;color:#64666e;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%2364666e' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m4 6 4 4 4-4'/%3E%3C/svg%3E") center/contain no-repeat;transition:transform .15s}
+ select:open::picker-icon{transform:rotate(180deg)}
+ select::picker(select){font-family:var(--sans);font-size:12px;font-weight:400;line-height:1.45;letter-spacing:0;color:#151823;background:#fff;border:1px solid #e3e5e9;border-radius:16px;padding:6px;margin-block:8px;min-width:anchor-size(width);max-width:min(360px,calc(100vw - 24px));max-height:min(340px,60vh);overflow-y:auto;box-shadow:0 4px 12px #15182308,0 16px 40px #15182312;scrollbar-width:thin;scrollbar-color:#cbd2ce transparent}
+ select option{display:flex;align-items:center;justify-content:space-between;gap:18px;min-height:38px;padding:10px 12px;border-radius:10px;background:transparent;color:#64666e;white-space:normal;overflow-wrap:anywhere;cursor:pointer}
+ select option+option{margin-top:2px}
+ select option:checked{background:#e9f1ed;color:#295b44;font-weight:500}
+ select option:hover{background:#f3f4f6;color:#151823}
+ select option:focus-visible{outline:1px solid #91b7a3;outline-offset:-1px;background:#f0f5f2;color:#295b44}
+ select option:disabled{color:#9ca3af;cursor:default}
+ select option::checkmark{order:2;margin-left:auto;color:#295b44;font-size:14px}
+ dialog select,dialog select option{text-transform:capitalize}
+}

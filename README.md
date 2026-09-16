@@ -28,7 +28,7 @@ Credentials stay on the local server and are excluded from Git. The server binds
 - Map pan, zoom, fit and fullscreen controls.
 - Ask dictation and specialist audio tools using OpenAI.
 - Browser storage for workspace data and IndexedDB for saved audio.
-- Desktop layout fits 1280 � 1024 without page scrolling; long content scrolls within panels.
+- Desktop layout fits 1280 × 1024 without page scrolling; long content scrolls within panels.
 
 ## Validation
 
