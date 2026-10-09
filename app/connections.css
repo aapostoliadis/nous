@@ -18,7 +18,13 @@ nous-orb canvas{display:block}
 .model-progress>nous-orb{margin:26px 0 20px}
 .model-progress .inspector-title{margin-top:0}
 .model-progress .ask-query{margin:18px 0;max-height:130px;overflow:auto}
-#claude-key-form button,#refresh-connections{display:inline-flex;align-items:center;justify-content:center;gap:8px}
+.connection-card .key-field,.connection-card .key-remember,.connection-card .key-actions,.connection-card [role=status]{grid-column:1/-1}
+.connection-card .key-remember{display:flex;align-items:center;gap:8px;margin-top:10px}
+.key-remember input{width:auto;min-height:0;margin:0;display:inline-block}
+.key-actions{display:flex;gap:10px;flex-wrap:wrap}
+.connection-card [role=status]{margin:0;font-size:13px;color:#28563f}
+.connection-card [role=status]:empty{display:none}
+.key-actions button,#refresh-connections{display:inline-flex;align-items:center;justify-content:center;gap:8px}
 .command-context{flex-wrap:wrap}
 .provider-controls{flex-wrap:wrap;justify-content:flex-end;max-width:100%}
 #ai-model{max-width:240px;min-width:155px}

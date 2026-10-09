@@ -1,4 +1,5 @@
-// Credentials stay on the local server. Only provider preferences enter browser storage.
+// Bring your own key: provider keys stay in this browser (this tab, or this device when remembered) and travel
+// with each request in the X-Provider-Key header. The server passes them to the provider and never stores them.
 (() => {
   const localSubmit=window.submitAsk;
   const selector=document.querySelector('#ai-provider');
@@ -12,6 +13,15 @@
   const send=document.querySelector('#command-form button[type=submit]');
   const cancel=document.querySelector('#cancel-ask');
   let hosted=false,providers=[],active=null,preferred,progress=null,checking=0;
+  const keyName=id=>'nous-key-'+id;
+  const store=place=>{try{return place==='device'?localStorage:sessionStorage;}catch{return null;}};
+  function saved(id){for(const place of ['tab','device'])try{const key=store(place)?.getItem(keyName(id));if(key)return {key,place};}catch{}return null;}
+  function forgetKey(id){for(const place of ['tab','device'])try{store(place)?.removeItem(keyName(id));}catch{}}
+  function saveKey(id,key,remember){forgetKey(id);const s=store(remember?'device':'tab');if(!s)throw Error('This browser is blocking storage, so the key cannot be kept.');s.setItem(keyName(id),key);}
+  window.providerHeaders=id=>{const key=saved(id)?.key;return key?{'X-Provider-Key':key}:{};};
+  const ready=p=>!!p&&(p.configured||!!saved(p.id));
+  const vendor=p=>({openai:'OpenAI',anthropic:'Anthropic'})[p.id]||p.label;
+  const keyStatus=p=>({tab:'Your key · this tab',device:'Your key · this device'})[saved(p.id)?.place]||(p.configured?'Server key · .env.local':'API key needed');
   const orb=document.querySelector('#connection-orb');
   function syncOrb(){orb.setAttribute('state',active?'working':'connecting');orb.hidden=!active&&!checking&&!modelsLoading;}
   window.renderModelProgress=()=>progress&&progress.branch===state.branch?`<section class="model-progress" aria-label="Answer in progress"><div class="inspector-eyebrow">THINKING WITH ${esc(progress.label)}</div><div class="stream-status"><nous-orb state="working" size="24"></nous-orb><span role="status">${progress.answer?'Writing your answer…':'Working through your request…'}</span></div><p class="ask-query">${esc(progress.prompt)}</p><p class="inspector-body ask-answer model-stream-answer">${esc(progress.answer||'')}</p><p class="source-note">${progress.answer?'Answer in progress. Workspace changes appear when complete.':'Using this branch’s goal, constraints and linked objects.'}</p></section>`:'';
@@ -44,8 +54,8 @@
   selector.value=['openai','anthropic','local'].includes(preferred)?preferred:'openai';
   function describe() {
     const p=providers.find(p=>p.id===selector.value);
-    connection.textContent=selector.value==='local'?'Local commands':p?.configured?(modelsLoading?'Loading models…':modelError||'Ready'):p?'API key needed':'Checking connection…';
-    connection.dataset.ready=String(!!p?.configured);
+    connection.textContent=selector.value==='local'?'Local commands':ready(p)?(modelsLoading?'Loading models…':modelError||'Ready'):p?'API key needed':'Checking connection…';
+    connection.dataset.ready=String(ready(p));
   }
   async function refresh() {
     checking++;syncOrb();
@@ -57,12 +67,12 @@
     const request=++modelRequest,provider=selector.value;
     const p=providers.find(p=>p.id===provider);
     modelError='';modelSelect.hidden=provider==='local';refreshModels.hidden=provider==='local';
-    if(!p?.configured){modelsLoading=false;modelSelect.innerHTML='<option value="">Connect provider first</option>';modelSelect.disabled=true;refreshModels.disabled=true;syncOrb();describe();return;}
+    if(!ready(p)){modelsLoading=false;modelSelect.innerHTML='<option value="">Connect provider first</option>';modelSelect.disabled=true;refreshModels.disabled=true;syncOrb();describe();return;}
     modelsLoading=true;modelSelect.disabled=true;refreshModels.disabled=true;syncOrb();describe();
     modelSelect.innerHTML='<option value="">Loading models…</option>';
     try {
       let catalog=modelCatalogs.get(provider);
-      if(force||!catalog){const response=await fetch('/api/models?provider='+encodeURIComponent(provider)+(force?'&refresh=1':''));const data=await response.json();if(!response.ok)throw Error(data.error||'Models unavailable');catalog=data;modelCatalogs.set(provider,catalog);}
+      if(force||!catalog){const response=await fetch('/api/models?provider='+encodeURIComponent(provider)+(force?'&refresh=1':''),{headers:window.providerHeaders(provider)});const data=await response.json();if(!response.ok)throw Error(data.error||'Models unavailable');catalog=data;modelCatalogs.set(provider,catalog);}
       if(request!==modelRequest)return;
       const wanted=chosenModels[provider]||catalog.defaultModel;
       modelSelect.innerHTML=['responses','chat','messages','transcription','speech','audio-chat','realtime'].map(mode=>{const models=catalog.models.filter(m=>m.mode===mode);return models.length?`<optgroup label="${({'responses':'Text · current','chat':'Text · other','messages':'Claude','transcription':'Audio · Transcribe','speech':'Audio · Read aloud','audio-chat':'Audio · Conversation','realtime':'Audio · Live voice'})[mode]}">${models.map(m=>`<option value="${esc(m.id)}">${esc(m.name)}</option>`).join('')}</optgroup>`:'';}).join('')||'<option value="">No text models available</option>';
@@ -77,20 +87,27 @@
   refreshModels.onclick=()=>loadModels(true);
   selector.onchange=()=>{try{localStorage.setItem('nous-provider',selector.value);}catch{}loadModels(false);};
   document.querySelector('#connections').onclick=()=>{
-    modal(`<h2>Your thinking partners.</h2><p>Choose a provider and model beside the Ask field. Models come from your API account; availability differs from the ChatGPT and Claude apps. Your request, shared goal, constraints and current branch objects are sent to that provider.</p>${providers.map(p=>`<div class="connection-card"><strong>${esc(p.label)}</strong><span>${p.configured?'API key configured':'API key needed'}</span><small>${esc(chosenModels[p.id]||p.model)}</small></div>`).join('')}<p>API usage uses each provider’s API billing. Responses become linked drafts; model output is not verified evidence. Original objects and decision states stay intact.</p><p class="source-note">${hosted?'Hosted credentials are managed by the deployment owner in Vercel environment settings.':'Credentials are stored on this computer, outside the exported prototype. Claude setup requires an Anthropic API key.'}</p><div class="dialog-actions"><button type="button" id="refresh-connections">Refresh status</button><button data-cancel class="primary">Done</button></div>`);
-    if(!hosted){
-    const setup=document.createElement('form');
-    setup.id='claude-key-form';
-    setup.innerHTML='<label>Claude API key<input type="password" name="anthropic-key" aria-label="Claude API key" autocomplete="off" spellcheck="false" required placeholder="Paste your new Claude key here"></label><p class="source-note">Save to this workspace’s .env.local file as ANTHROPIC_API_KEY. Stored on this computer only; never included in exports.</p><button class="primary" type="submit">Save Claude key locally</button><p id="key-save-status" role="status"></p>';
-    document.querySelector('#dialog .dialog-actions').before(setup);
-    setup.onsubmit=async event=>{
-      event.preventDefault();const field=setup.querySelector('input'),button=setup.querySelector('button'),feedback=setup.querySelector('#key-save-status');
-      button.disabled=true;button.innerHTML='<nous-orb state="connecting" size="20"></nous-orb> Saving…';setup.setAttribute('aria-busy','true');
-      try{const response=await fetch('/api/connections/anthropic',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:field.value})});field.value='';const result=await response.json();if(!response.ok)throw Error(result.error);modelCatalogs.delete('anthropic');await refresh();feedback.textContent='Claude key saved. Choose Claude beside Ask to use it.';selector.value='anthropic';selector.onchange();}
-      catch(e){field.value='';feedback.textContent=e.message||'Could not save the key.';}
-      finally{button.disabled=false;button.textContent='Save Claude key locally';setup.setAttribute('aria-busy','false');}
-    };
-    }
+    const card=p=>{const place=saved(p.id)?.place;return `<form class="connection-card" data-provider="${esc(p.id)}"><strong>${esc(p.label)}</strong><span data-key-status>${keyStatus(p)}</span><small>${esc(chosenModels[p.id]||p.model)}</small><label class="key-field">${esc(vendor(p))} API key<input type="password" name="key" autocomplete="off" spellcheck="false" required placeholder="Paste your ${esc(vendor(p))} key"></label><label class="key-remember"><input type="checkbox" name="remember"${place==='device'?' checked':''}> Remember on this device</label><div class="key-actions"><button class="primary" type="submit">Check and save</button><button type="button" data-forget${place?'':' hidden'}>Forget key</button></div><p role="status"></p></form>`;};
+    modal(`<h2>Your thinking partners.</h2><p>Choose a provider and model beside the Ask field. Models come from your API account; availability differs from the ChatGPT and Claude apps. Your request, shared goal, constraints and current branch objects are sent to that provider.</p>${providers.map(card).join('')}<p>Use your own API keys; usage is billed to your provider account. Responses become linked drafts; model output is not verified evidence. Original objects and decision states stay intact.</p><p class="source-note">Keys stay in this browser: for this tab only, or on this device if you tick Remember. Each request sends your key to ${hosted?'this site over HTTPS':'the Nous server on this computer'}, which passes it to the provider and never stores it.${hosted?'':' Locally, keys in .env.local are used when no browser key is saved.'}</p><div class="dialog-actions"><button type="button" id="refresh-connections">Refresh status</button><button data-cancel class="primary">Done</button></div>`);
+    // modal() binds only its first form; each provider card gets its own handlers instead.
+    document.querySelectorAll('#dialog form.connection-card').forEach(form=>{
+      const p=providers.find(p=>p.id===form.dataset.provider),field=form.elements.key,button=form.querySelector('[type=submit]'),forget=form.querySelector('[data-forget]'),status=form.querySelector('[data-key-status]'),feedback=form.querySelector('[role=status]');
+      form.onsubmit=async event=>{
+        event.preventDefault();const key=field.value.trim();
+        if(!/^[\x21-\x7e]{20,500}$/.test(key)){feedback.textContent=`Enter a valid ${vendor(p)} API key.`;field.focus();return;}
+        button.disabled=true;button.innerHTML='<nous-orb state="connecting" size="20"></nous-orb> Checking…';form.setAttribute('aria-busy','true');
+        try{
+          // Check the key against the provider before keeping it, so a typo never becomes a saved connection.
+          const response=await fetch('/api/models?provider='+encodeURIComponent(p.id)+'&refresh=1',{headers:{'X-Provider-Key':key}});field.value='';
+          const data=await response.json().catch(()=>({}));if(!response.ok)throw Error(data.error||'The key could not be checked.');
+          saveKey(p.id,key,form.elements.remember.checked);modelCatalogs.set(p.id,data);
+          status.textContent=keyStatus(p);forget.hidden=false;feedback.textContent=`Key works · ${data.models.length} models available.`;
+          selector.value=p.id;selector.onchange();
+        }catch(e){field.value='';feedback.textContent=e.message||'The key could not be checked.';}
+        finally{button.disabled=false;button.textContent='Check and save';form.setAttribute('aria-busy','false');}
+      };
+      forget.onclick=()=>{forgetKey(p.id);modelCatalogs.delete(p.id);status.textContent=keyStatus(p);forget.hidden=true;form.elements.remember.checked=false;feedback.textContent='Key removed from this browser.';if(selector.value===p.id)loadModels(false);else describe();};
+    });
     document.querySelector('#refresh-connections').onclick=async event=>{const button=event.currentTarget;button.disabled=true;button.innerHTML='<nous-orb state="connecting" size="20"></nous-orb> Checking…';modelCatalogs.clear();await refresh();if(button.isConnected&&document.querySelector('#dialog').open){document.querySelector('#dialog').close();document.querySelector('#connections').click();}};
   };
   function snapshot(){return JSON.stringify({goal:state.goal,constraints:state.constraints,objects:current()});}
@@ -105,12 +122,12 @@
     if(!prompt){input.focus();return;}
     const provider=selector.value, model=modelSelect.value, branch=state.branch, before=snapshot();
     const p=providers.find(p=>p.id===provider);
-    if(!p?.configured){finishAsk(prompt,{kind:'error',title:'Connect this provider first.',answer:provider==='anthropic'?'Claude needs an Anthropic API key. Open Connections to check setup.':'OpenAI is not configured or the local server needs restarting.',change:'No workspace objects were changed.'});return;}
+    if(!ready(p)){finishAsk(prompt,{kind:'error',title:'Connect this provider first.',answer:p?`Add your ${vendor(p)} API key in Connections.`:'The provider list is still loading or the local server needs restarting.',change:'No workspace objects were changed.'});return;}
     if(modelsLoading||!model){finishAsk(prompt,{kind:'error',title:'Choose a model first.',answer:modelsLoading?'The model list is still loading.':'Refresh the model list and select an available model.',change:'No workspace objects were changed.'});return;}
     active=new AbortController();progress={branch,prompt,label:model,answer:''};busy(true);if(innerWidth<=850)document.querySelector('#inspector').scrollIntoView({block:'start'});connection.textContent='Thinking…';
     const timer=setTimeout(()=>active?.abort(),95000);
     try {
-      const response=await fetch('/api/ask',{method:'POST',headers:{'Content-Type':'application/json'},signal:active.signal,body:JSON.stringify({provider,model,prompt,stream:true,workspace:{goal:state.goal,constraints:state.constraints,selected:state.selected,objects:current()}})});
+      const response=await fetch('/api/ask',{method:'POST',headers:{'Content-Type':'application/json',...window.providerHeaders(provider)},signal:active.signal,body:JSON.stringify({provider,model,prompt,stream:true,workspace:{goal:state.goal,constraints:state.constraints,selected:state.selected,objects:current()}})});
       const data=await readAnswer(response,active.signal);active.signal.throwIfAborted();
       // Fail closed if the user changed context while the provider was working.
       if(state.branch!==branch||snapshot()!==before){throw new Error('The workspace changed while the model was working. Send the request again using the current context.');}

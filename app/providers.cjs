@@ -9,10 +9,23 @@ function config() {
   return { ...local, ...process.env };
 }
 const providers = {
-  openai: { label:'ChatGPT · OpenAI', key:'OPENAI_API_KEY', modelEnv:'OPENAI_MODEL', model:'gpt-4.1-mini', url:'https://api.openai.com/v1/responses' },
-  anthropic: { label:'Claude', key:'ANTHROPIC_API_KEY', modelEnv:'ANTHROPIC_MODEL', model:'claude-sonnet-4-6', url:'https://api.anthropic.com/v1/messages' }
+  openai: { label:'ChatGPT · OpenAI', vendor:'OpenAI', key:'OPENAI_API_KEY', modelEnv:'OPENAI_MODEL', model:'gpt-4.1-mini', url:'https://api.openai.com/v1/responses' },
+  anthropic: { label:'Claude', vendor:'Anthropic', key:'ANTHROPIC_API_KEY', modelEnv:'ANTHROPIC_MODEL', model:'claude-sonnet-4-6', url:'https://api.anthropic.com/v1/messages' }
 };
-function status() { const env=config(); return Object.entries(providers).map(([id,p])=>({id,label:p.label,configured:!!env[p.key],model:env[p.modelEnv]||p.model})); }
+const hosted=()=>process.env.VERCEL==='1';
+function status() { const env=config(); return Object.entries(providers).map(([id,p])=>({id,label:p.label,configured:!hosted()&&!!env[p.key],model:env[p.modelEnv]||p.model})); }
+// Each request carries the user's own key (X-Provider-Key). Hosted, deployment env keys are never used, so
+// visitors cannot spend the owner's credit. Locally, .env.local remains the fallback for single-user setups.
+function credentials(provider,requestKey) {
+  const p=providers[provider];if(!p)fail('Choose ChatGPT or Claude.');
+  if(requestKey!==undefined&&requestKey!==''){
+    if(typeof requestKey!=='string'||!/^[!-~]{20,500}$/.test(requestKey))fail(`Enter a valid ${p.vendor} API key.`);
+    return {key:requestKey,workspace:''};
+  }
+  const env=config();
+  if(hosted()||!env[p.key])fail(`Add your ${p.vendor} API key in Connections.`,401);
+  return {key:env[p.key],workspace:provider==='anthropic'&&env.ANTHROPIC_WORKSPACE_ID||''};
+}
 const catalogs=new Map();
 function modelMode(provider,id) {
   if(provider==='anthropic') return 'messages';
@@ -27,14 +40,14 @@ function modelMode(provider,id) {
   if(/chat-latest/.test(base)||/^gpt-3\.5|^gpt-4(?:$|-(?:0|turbo|32k|vision))/.test(base)) return 'chat';
   return 'responses';
 }
-async function listModels(provider,{force=false,fetchImpl=fetch}={}) {
+async function listModels(provider,{force=false,fetchImpl=fetch,key}={}) {
   const p=providers[provider];if(!p)fail('Choose ChatGPT or Claude.');
-  const env=config();if(!env[p.key])fail(`${p.label} needs an API key.`,503);
-  const fingerprint=createHash('sha256').update(env[p.key]+'|'+(env.ANTHROPIC_WORKSPACE_ID||'')).digest('hex');
+  const env=config(),cred=credentials(provider,key);
+  const fingerprint=createHash('sha256').update(cred.key+'|'+cred.workspace).digest('hex');
   const cacheKey=provider+fingerprint, cached=catalogs.get(cacheKey);
   if(!force&&cached&&Date.now()-cached.at<300000)return cached.value;
-  const headers=provider==='openai'?{Authorization:`Bearer ${env[p.key]}`}:{'x-api-key':env[p.key],'anthropic-version':'2023-06-01'};
-  if(provider==='anthropic'&&env.ANTHROPIC_WORKSPACE_ID)headers['anthropic-workspace-id']=env.ANTHROPIC_WORKSPACE_ID;
+  const headers=provider==='openai'?{Authorization:`Bearer ${cred.key}`}:{'x-api-key':cred.key,'anthropic-version':'2023-06-01'};
+  if(cred.workspace)headers['anthropic-workspace-id']=cred.workspace;
   let cursor='',raw=[];const seen=new Set();
   for(let page=0;page<50;page++){
     const url=provider==='openai'?'https://api.openai.com/v1/models':`https://api.anthropic.com/v1/models?limit=1000${cursor?'&after_id='+encodeURIComponent(cursor):''}`;
@@ -50,7 +63,9 @@ async function listModels(provider,{force=false,fetchImpl=fetch}={}) {
   const models=unique.filter(m=>modelMode(provider,m.id)).map(m=>({id:m.id,name:m.display_name||m.id,mode:modelMode(provider,m.id),structured:provider==='anthropic'?m.capabilities?.structured_outputs?.supported!==false:!(/chat-latest|search-|^gpt-3\.5|^gpt-4(?:$|-)|gpt-4o-2024-05/.test(m.id)),created:m.created||Date.parse(m.created_at)||0,maxTokens:m.max_tokens||null})).sort((a,b)=>b.created-a.created||a.name.localeCompare(b.name,undefined,{numeric:true}));
   const defaultModel=env[p.modelEnv]||p.model;
   const value={provider,models,defaultModel,excluded:unique.length-models.length,updatedAt:new Date().toISOString()};
-  catalogs.set(cacheKey,{at:Date.now(),value});return value;
+  catalogs.delete(cacheKey);catalogs.set(cacheKey,{at:Date.now(),value});
+  if(catalogs.size>100)catalogs.delete(catalogs.keys().next().value); // One entry per user key; keep memory bounded.
+  return value;
 }
 const string = {type:'string'};
 const strings = {type:'array',items:string};
@@ -89,10 +104,10 @@ function validateResult(value,workspace) {
 }
 async function ask(input,fetchImpl=fetch,signal,onProgress) {
   const p=providers[input?.provider]; if(!p) fail('Choose ChatGPT or Claude.');
-  const env=config(); if(!env[p.key]) fail(`${p.label} needs an API key.`,503);
+  const env=config(), cred=credentials(input.provider,input.key);
   const workspace=contextFor(input), model=input.model||env[p.modelEnv]||p.model;
   if(!boundedString(model,200))fail('Choose a valid model.');
-  const catalog=await listModels(input.provider,{fetchImpl});
+  const catalog=await listModels(input.provider,{fetchImpl,key:input.key});
   const chosen=catalog.models.find(m=>m.id===model);
   if(!chosen)fail('This model is not in your available text models. Refresh the model list and choose again.');
   if(!['responses','chat','messages'].includes(chosen.mode))fail('Open Audio tools to use this specialist model.');
@@ -101,14 +116,14 @@ async function ask(input,fetchImpl=fetch,signal,onProgress) {
   const headers={'content-type':'application/json'};
   let body,url=p.url;
   if(input.provider==='openai') {
-    headers.Authorization=`Bearer ${env[p.key]}`;
+    headers.Authorization=`Bearer ${cred.key}`;
     if(chosen.mode==='chat'){
       url='https://api.openai.com/v1/chat/completions';
       body={model,store:false,messages:[{role:'system',content:system},{role:'user',content}],max_completion_tokens:4096};
     }else body={model,store:false,instructions:system,input:content,max_output_tokens:5000,...(chosen.structured?{text:{format:{type:'json_schema',name:'nous_workspace_result',strict:true,schema}}}:{})};
   } else {
-    headers['x-api-key']=env[p.key];headers['anthropic-version']='2023-06-01';
-    if(env.ANTHROPIC_WORKSPACE_ID) headers['anthropic-workspace-id']=env.ANTHROPIC_WORKSPACE_ID;
+    headers['x-api-key']=cred.key;headers['anthropic-version']='2023-06-01';
+    if(cred.workspace) headers['anthropic-workspace-id']=cred.workspace;
     body={model,max_tokens:Math.min(5000,chosen.maxTokens||5000),system,messages:[{role:'user',content}],...(chosen.structured?{output_config:{format:{type:'json_schema',schema}}}:{})};
   }
   if(onProgress)body.stream=true;
@@ -140,21 +155,14 @@ async function ask(input,fetchImpl=fetch,signal,onProgress) {
   let parsed; try{parsed=JSON.parse(output);}catch{fail('The model did not return a usable answer. No changes were made.',502);}
   return {...validateResult(parsed,workspace),provider:input.provider,providerLabel:p.label,model,time:new Date().toISOString()};
 }
-function saveClaudeKey(value) {
-  if(typeof value!=='string'||!/^sk-ant-[A-Za-z0-9_-]{20,500}$/.test(value.trim())) fail('Enter a valid Anthropic API key.');
-  if(fs.existsSync(envPath)&&fs.lstatSync(envPath).isSymbolicLink()) fail('The credentials file must not be a symbolic link.');
-  const existing=fs.existsSync(envPath)?fs.readFileSync(envPath,'utf8'):'';
-  const line=`ANTHROPIC_API_KEY=${value.trim()}`;
-  const next=/^ANTHROPIC_API_KEY=.*$/m.test(existing)?existing.replace(/^ANTHROPIC_API_KEY=.*$/m,line):existing.trimEnd()+'\n'+line+'\n';
-  fs.writeFileSync(envPath,next,{mode:0o600});
-}
-module.exports={status,ask,contextFor,validateResult,schema,saveClaudeKey,listModels,modelMode};
+module.exports={status,ask,contextFor,validateResult,schema,listModels,modelMode};
 // Dedicated audio endpoints keep specialist models out of the structured-text adapter.
 async function audioRequest(input,fetchImpl=fetch,signal){
   if(!input||!boundedString(input.model,200))fail('Choose an audio model.');
-  const selected=(await listModels('openai',{fetchImpl})).models.find(m=>m.id===input.model);
+  const key=credentials('openai',input.key).key;
+  const selected=(await listModels('openai',{fetchImpl,key:input.key})).models.find(m=>m.id===input.model);
   if(!selected||!['speech','transcription','audio-chat','realtime'].includes(selected.mode))fail('Choose an available audio model.');
-  const model=selected.id,mode=selected.mode,headers={Authorization:`Bearer ${config().OPENAI_API_KEY}`};
+  const model=selected.id,mode=selected.mode,headers={Authorization:`Bearer ${key}`};
   let url,body;
   const text=typeof input.text==='string'?input.text.trim():'';
   if(text.length>4000)fail('Use up to 4,000 characters for audio.');

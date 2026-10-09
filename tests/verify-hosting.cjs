@@ -10,13 +10,13 @@ if(!process.argv.includes('--fixture')){
   }
 }else{
   const hosted=process.argv.at(-1)==='hosted';
-  let saves=0,asks=0;
+  let asks=0,modelKey;
+  const userKey='sk-fixture-user-key-0123456789';
   const providerPath=require.resolve('../app/providers.cjs');
   require.cache[providerPath]={id:providerPath,filename:providerPath,loaded:true,exports:{
     status:()=>[{id:'openai',configured:false}],
-    saveClaudeKey:()=>saves++,
-    listModels:async()=>({models:[]}),
-    ask:async(input,fetch,signal,emit)=>{asks++;assert.equal(input.prompt,'Hello');emit?.('First part');await new Promise(r=>setTimeout(r,30));return {answer:'First part, complete.'};},
+    listModels:async(provider,opts)=>{modelKey=opts.key;return {models:[]};},
+    ask:async(input,fetch,signal,emit)=>{asks++;assert.equal(input.prompt,'Hello');assert.equal(input.key,userKey,'Key must come from the header, not the body');emit?.('First part');await new Promise(r=>setTimeout(r,30));return {answer:'First part, complete.'};},
     audioRequest:async()=>({ok:true})
   }};
   const originalListen=http.Server.prototype.listen;
@@ -53,9 +53,10 @@ if(!process.argv.includes('--fixture')){
       assert.equal((await request('/api/providers',{headers:{Origin:'https://attacker.example'}})).status,403);
       assert.equal((await request('/api/providers',{headers:{'Sec-Fetch-Site':'cross-site'}})).status,403);
       const status=await request('/api/providers',{headers:{Origin:origin}});assert.equal(status.status,200);assert.equal(JSON.parse(status.body).hosted,hosted);
-      const key=await request('/api/connections/anthropic',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json'},body:'{"key":"fixture-only"}'});
-      assert.equal(key.status,hosted?403:200);assert.equal(saves,hosted?0:1);
-      const stream=await request('/api/ask',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json'},body:'{"prompt":"Hello","stream":true}'});
+      assert.equal((await request('/api/connections/anthropic',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json'},body:'{"key":"fixture-only"}'})).status,405,'Server-side key saving is removed');
+      assert.equal((await request('/api/models?provider=openai',{headers:{Origin:origin,'X-Provider-Key':userKey}})).status,200);assert.equal(modelKey,userKey);
+      for(const body of ['null','[]','"text"'])assert.equal((await request('/api/ask',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json'},body})).status,400,body);
+      const stream=await request('/api/ask',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json','X-Provider-Key':userKey},body:'{"prompt":"Hello","stream":true,"key":"from-body-ignored"}'});
       assert.equal(stream.status,200);assert.equal(asks,1);
       const events=stream.body.trim().split('\n').map(JSON.parse);assert.deepEqual(events.map(e=>e.type),['start','answer','complete']);
       assert.ok(stream.chunks.length>=2,'Response should arrive progressively');

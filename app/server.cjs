@@ -1,7 +1,7 @@
 const http = require('node:http');
 const fs = require('node:fs');
 const path = require('node:path');
-const {status,ask,saveClaudeKey,listModels,audioRequest} = require('./providers.cjs');
+const {status,ask,listModels,audioRequest} = require('./providers.cjs');
 const root = __dirname;
 const port = Number(process.env.PORT || 4179);
 const hosted=process.env.VERCEL==='1';
@@ -20,19 +20,8 @@ async function handler(req,res){
   if(url==='/api/providers'&&req.method==='GET') return json(res,200,{providers:status(),hosted});
   if(url==='/api/models'&&req.method==='GET') {
     const params=new URL(req.url,'http://localhost').searchParams;
-    try{return json(res,200,await listModels(params.get('provider'),{force:params.get('refresh')==='1'}));}
+    try{return json(res,200,await listModels(params.get('provider'),{force:params.get('refresh')==='1',key:req.headers['x-provider-key']}));}
     catch(e){return json(res,e.status||502,{error:e.status?e.message:'Could not reach the model catalogue. Try refreshing.'});}
-  }
-  if(url==='/api/connections/anthropic'&&req.method==='POST') {
-    if(hosted) return json(res,403,{error:'Manage hosted API keys in Vercel environment settings.'});
-    if(!req.headers.origin||req.headers['content-type']!=='application/json') return json(res,403,{error:'Save credentials from Nous Connections.'});
-    try {
-      let raw='',size=0;
-      for await(const chunk of req){size+=chunk.length;if(size>2048)return json(res,413,{error:'Invalid key input.'});raw+=chunk;}
-      const input=JSON.parse(raw);
-      saveClaudeKey(input.key);
-      return json(res,200,{saved:true});
-    }catch(e){return json(res,e.status||400,{error:e.status?e.message:'Could not save the key.'});}
   }
   if(['/api/ask','/api/audio'].includes(url)&&req.method==='POST') {
     if(url==='/api/audio'&&!req.headers.origin)return json(res,403,{error:'Open Audio tools in Nous.'});
@@ -45,7 +34,9 @@ async function handler(req,res){
     try {
       let body='',size=0;
       for await(const chunk of req){size+=chunk.length;if(size>(url==='/api/audio'?18000000:350000)){const e=new Error('Workspace exceeds the supported request size.');e.status=413;throw e;}body+=chunk;}
-      let input;try{input=JSON.parse(body);}catch{const e=new Error('Invalid JSON request.');e.status=400;throw e;}
+      let input;try{input=JSON.parse(body);}catch{}
+      if(!input||typeof input!=='object'||Array.isArray(input)){const e=new Error('Invalid JSON request.');e.status=400;throw e;}
+      input.key=req.headers['x-provider-key']; // The user's own key arrives as a header only, never in the body or URL.
       if(url==='/api/ask'&&input.stream===true){
         res.writeHead(200,{'Content-Type':'application/x-ndjson; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'});
         res.flushHeaders();

@@ -65,13 +65,13 @@
           const offer=await pc.createOffer();await pc.setLocalDescription(offer);input.sdp=offer.sdp;
         }
         if(controller.signal.aborted)throw new DOMException('Cancelled','AbortError');
-        const r=await fetch('/api/audio',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(input),signal:controller.signal});const data=await r.json();if(!r.ok)throw Error(data.error||'Audio request failed.');if(closed||controller.signal.aborted)return;
+        const r=await fetch('/api/audio',{method:'POST',headers:{'Content-Type':'application/json',...window.providerHeaders?.('openai')},body:JSON.stringify(input),signal:controller.signal});const data=await r.json();if(!r.ok)throw Error(data.error||'Audio request failed.');if(closed||controller.signal.aborted)return;
         if(mode.value==='realtime'){await pc.setRemoteDescription({type:'answer',sdp:data.sdp});sessionTimer=setTimeout(()=>stop.click(),300000);q('#audio-save').disabled=true;stop.textContent='Stop voice';}
         else{showResult(data);message('Ready to review. Save the result to keep it in your workspace.');}
       }catch(e){if(!closed){stopVoice();message(e.name==='AbortError'?'Cancelled. Your inputs have been kept.':e.name==='NotAllowedError'?'Microphone permission was not granted. You can use a recording instead.':e.message,true);}}
       finally{clearTimeout(timer);request=null;if(!closed&&!pc)setBusy(false);}
     };
-    try{const r=await fetch('/api/models?provider=openai');const data=await r.json();if(!r.ok)throw Error(data.error);if(closed)return;catalog=data.models;if(selected)mode.value=selected.mode;update();if(selected&&catalog.some(m=>m.id===selected.id))model.value=selected.id;}
+    try{const r=await fetch('/api/models?provider=openai',{headers:window.providerHeaders?.('openai')||{}});const data=await r.json();if(!r.ok)throw Error(data.error);if(closed)return;catalog=data.models;if(selected)mode.value=selected.mode;update();if(selected&&catalog.some(m=>m.id===selected.id))model.value=selected.id;}
     catch(e){if(!closed){orb.hidden=true;message(e.message,true);}}
   };
   document.querySelector('#audio-tools').onclick=()=>window.openAudioTools();
