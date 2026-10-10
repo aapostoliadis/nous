@@ -16,7 +16,8 @@ async function handler(req,res){
   if(req.headers.origin && (hosted ? req.headers.origin!==`https://${host}` : ![`http://localhost:${port}`,`http://127.0.0.1:${port}`].includes(req.headers.origin))) return json(res,403,{error:'Origin not allowed.'});
   let url;try{url=decodeURIComponent(new URL(req.url,'http://localhost').pathname);}catch{return json(res,400,{error:'Invalid path.'});}
   // A link from another site (search, social, the Vercel dashboard) must open the page; other sites still can't call the API or load assets.
-  if(req.headers['sec-fetch-site']==='cross-site'&&!(req.headers['sec-fetch-mode']==='navigate'&&['GET','HEAD'].includes(req.method)&&!url.startsWith('/api/'))) return json(res,403,{error:'Origin not allowed.'});
+  // Not keyed on Sec-Fetch-Mode: Vercel did not pass it through. Framing is refused by the page's own headers instead.
+  if(req.headers['sec-fetch-site']==='cross-site'&&!(['GET','HEAD'].includes(req.method)&&['/','/index.html'].includes(url))) return json(res,403,{error:'Origin not allowed.'});
   if(url==='/api/providers'&&req.method==='GET') return json(res,200,{providers:status(),hosted});
   if(url==='/api/models'&&req.method==='GET') {
     const params=new URL(req.url,'http://localhost').searchParams;
@@ -54,7 +55,7 @@ async function handler(req,res){
   const file=path.resolve(root,relative);
   if(!file.startsWith(root+path.sep)) return json(res,403,{error:'Invalid path.'});
   let data;try{data=await fs.promises.readFile(file);}catch{return json(res,404,{error:'Not found.'});}
-  res.setHeader('Content-Type',({'html':'text/html; charset=utf-8','js':'text/javascript','css':'text/css','svg':'image/svg+xml','png':'image/png','woff2':'font/woff2'})[path.extname(file).slice(1)]);res.setHeader('Cache-Control','no-cache');res.setHeader('X-Content-Type-Options','nosniff');res.end(req.method==='HEAD'?undefined:data);
+  res.setHeader('Content-Type',({'html':'text/html; charset=utf-8','js':'text/javascript','css':'text/css','svg':'image/svg+xml','png':'image/png','woff2':'font/woff2'})[path.extname(file).slice(1)]);res.setHeader('Cache-Control','no-cache');res.setHeader('X-Content-Type-Options','nosniff');if(relative==='index.html'){res.setHeader('Content-Security-Policy',"frame-ancestors 'none'");res.setHeader('X-Frame-Options','DENY');}res.end(req.method==='HEAD'?undefined:data);
 }
 module.exports=handler;
 if(require.main===module){
