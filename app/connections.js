@@ -133,6 +133,8 @@
     if(selector.value==='local')return localSubmit();
     const input=document.querySelector('#command'),prompt=input.value.trim();
     if(!prompt){input.focus();return;}
+    // Workspace commands (goal, constraint, add, branch, mark…) run locally whichever provider is selected.
+    if(localSubmit(true))return;
     const provider=selector.value, model=modelSelect.value, branch=state.branch, before=snapshot();
     const p=providers.find(p=>p.id===provider);
     if(!ready(p)){finishAsk(prompt,{kind:'error',title:'Connect this provider first.',answer:p?`Add your ${vendor(p)} API key in Connections.`:'The provider list is still loading or the local server needs restarting.',change:'No workspace objects were changed.'});return;}

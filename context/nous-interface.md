@@ -191,3 +191,36 @@ the ~175px it covered.
 **Consequence:** desktop and ≤850px now pin the same element, so the two
 layouts behave alike. Pages get 82px of bottom padding on desktop (70px
 on mobile) so their last content is not hidden behind the input.
+
+## Workspace commands run locally whichever provider is selected
+
+**Id:** c6dadacb-0af5-4654-a2cd-bcc2b812c6a2
+**Type:** decision
+**Status:** active
+**Evidence:** inferred
+**Source:** nous working-tree change, 2026-10-10 (`app/ask.js`, `app/connections.js`, `tests/verify-provider-client.cjs`)
+
+When a model provider is selected, `submitAsk` in `app/connections.js`
+first calls the local `submitAsk(true)`. In that mode `answerAsk` runs
+only the workspace commands (set goal, add constraint, create object,
+create branch, challenge, mark @X as state, compare alternatives, draft
+brief, edit context, show actions, show map) and returns `null` for
+anything else, which then goes to the model. "Explain @X" and other
+questions are not commands, so a selected model answers them.
+
+**Reason:** before this, selecting OpenAI or Claude sent commands such
+as "add a question: …" to the model instead of changing the workspace,
+and without a saved key they failed with "Connect this provider first".
+Commands change local state that the model cannot change directly.
+
+**Which parts are confirmed:** that commands must work with any provider
+(asked for by the maintainer). Inferred: the reason as worded, and that
+"draft a brief" stays local (it rebuilds the brief from workspace
+objects) rather than going to a selected model — offered as an open
+choice and not yet decided by the maintainer.
+
+**Alternatives:** unknown — no other routing was discussed.
+
+**Consequence:** a reference to a missing object (`@X99`) is answered
+locally with "Object not found" before any model is asked, as it was
+before.

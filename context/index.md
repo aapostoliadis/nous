@@ -49,7 +49,7 @@
 ## N
 
 - [nous-api-keys.md](nous-api-keys.md) — Nous: whose provider key pays for model calls, how the browser holds it, why the hosted proxy has no model allowlist, and why requests share no server-wide lock
-- [nous-interface.md](nous-interface.md) — Nous: why proposal review is a slide-over, Rejected is a side exit, the model picker hides behind a chip and lists only text models, how mobile/touch layouts work, and why only the Ask input is pinned on desktop
+- [nous-interface.md](nous-interface.md) — Nous: why proposal review is a slide-over, Rejected is a side exit, the model picker hides behind a chip and lists only text models, how mobile/touch layouts work, why only the Ask input is pinned on desktop, and why workspace commands run locally with any provider
 
 ## O
 

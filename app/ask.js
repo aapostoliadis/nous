@@ -71,7 +71,7 @@ function askTokens(text) {
   const ignored = new Set('a an and are as at be by can could do does for from how i in is it me my of on or our please should show tell that the their them there these this to us was we what when where which who why will with would you your about find information'.split(' '));
   return [...new Set((text.toLowerCase().match(/[\p{L}\p{N}]+/gu)||[]).filter(w => w.length>2&&!ignored.has(w)).map(w=>w.replace(/(?:ing|s)$/,'')))];
 }
-function answerAsk(raw) {
+function answerAsk(raw, commandsOnly) {
   const text = raw.trim();
   const t = text.replace(/^please\s+/i,'');
   const lower = t.toLowerCase();
@@ -130,6 +130,8 @@ function answerAsk(raw) {
   if (/^(?:edit|change|update)\s+(?:the |shared |our )?(?:context|goal)\s*$/i.test(t)) { askPending(text,editContext,()=>({kind:'changed',title:'Context updated.',answer:state.goal,change:'Goal and constraints updated across all branches.'}));return true; }
   if (/^(?:show|open|review|approve|execute)\s+(?:the |proposed )?actions?\b/i.test(t)) return finish({title:'Action ready for review.',answer:'Inspect the proposed brief, its inputs and its destination. Approval is required before the local download.',view:'actions',change:'Opened the action review. Nothing has run.'});
   if (/^(?:show|open|go to|view)\s+(?:the )?(?:map|workspace)\s*$/i.test(t)) return finish({title:'Map opened.',answer:`${plural(current().length,'object')} ${current().length===1?'belongs':'belong'} to this branch. Select an object to inspect its context.`,view:'map'});
+  // With a model selected, only the workspace commands above run here; questions go to the model.
+  if (commandsOnly) return null;
   if (target && /^(?:open|show|inspect|explain|summari[sz]e|what is|tell me about)\s+@/i.test(t)) return finish({title:target.title,answer:target.body,ids:[target.id,...target.links],view:target.type==='decision'?'decisions':target.type==='evidence'||target.type==='source'?'evidence':'map'});
 
   // Questions return existing material with references, never invented research.
@@ -155,17 +157,20 @@ function answerAsk(raw) {
   if(matches.length) return finish({title:'Relevant workspace information.',answer:matches[0].body,ids:matches.map(o=>o.id),view:matches[0].type==='decision'?'decisions':matches[0].type==='evidence'||matches[0].type==='source'?'evidence':'map'});
   return finish({kind:'unmatched',title:'No matching information yet.',answer:'This request cannot be answered from the current workspace. No live model or web search is connected. Keep it as an open question, or ask about the goal, evidence, decisions or next steps.',change:'No objects were changed. Your request remains in the Ask field.'});
 }
-function submitAsk() {
+function submitAsk(commandsOnly=false) {
   const input=document.querySelector('#command'), text=input.value.trim();
   if(!text){input.focus();return;}
   try {
-    if(answerAsk(text)) input.value='';
+    const handled=answerAsk(text,commandsOnly);
+    if(handled===null) return false;
+    if(handled) input.value='';
     if(innerWidth<=850&&!document.querySelector('#dialog').open) document.querySelector('#inspector').scrollIntoView({block:'start'});
   } catch(error) {
     console.error(error);
     document.querySelector('#ask-announcement').textContent='The request could not be completed. Your text has been kept so you can try again.';
     toast('The request could not be completed. Your text has been kept.');
   }
+  return true;
 }
 window.submitAsk=submitAsk;
 const askAnnouncement=document.createElement('div');
