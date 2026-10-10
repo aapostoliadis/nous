@@ -60,6 +60,8 @@ if(!process.argv.includes('--fixture')){
       assert.equal(stream.status,200);assert.equal(asks,1);
       const events=stream.body.trim().split('\n').map(JSON.parse);assert.deepEqual(events.map(e=>e.type),['start','answer','complete']);
       assert.ok(stream.chunks.length>=2,'Response should arrive progressively');
+      const together=await Promise.all([1,2].map(()=>request('/api/ask',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json','X-Provider-Key':userKey},body:'{"prompt":"Hello"}'})));
+      assert.deepEqual(together.map(r=>r.status),[200,200],'One visitor\'s request must not block another\'s');assert.equal(asks,3);
       if(hosted){
         for(const alias of ['nous-preview.vercel.app','nous-main.vercel.app','thought.example'])assert.equal((await request('/',{headers:{Host:alias,Origin:'https://'+alias}})).status,200);
         assert.equal((await request('/',{headers:{Origin:'http://'+host}})).status,403);
