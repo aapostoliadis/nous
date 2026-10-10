@@ -13,7 +13,7 @@
   const toolbar=document.createElement('div');
   toolbar.className='map-tools';toolbar.setAttribute('role','group');toolbar.setAttribute('aria-label','Map controls');
   toolbar.innerHTML='<button type="button" id="map-zoom-out" aria-label="Zoom out map" title="Zoom out">−</button><button type="button" id="map-fit" aria-label="Fit map to view" title="Fit all objects"><span id="map-zoom-level">100%</span><small>Fit</small></button><button type="button" id="map-zoom-in" aria-label="Zoom in map" title="Zoom in">+</button>';
-  control.before(toolbar);toolbar.append(control);const hint=document.createElement("div");hint.className="map-pan-hint";hint.textContent="Drag background to pan · + / − zoom · 0 fit";const navigation=document.createElement("div");navigation.className="map-navigation";frame.append(navigation);navigation.append(hint,toolbar);
+  control.before(toolbar);toolbar.append(control);const hint=document.createElement("div");hint.className="map-pan-hint";const coarse=matchMedia("(pointer:coarse)");const navigation=document.createElement("div");navigation.className="map-navigation";frame.append(navigation);navigation.append(hint,toolbar);
   const minus=toolbar.querySelector('#map-zoom-out'),plus=toolbar.querySelector('#map-zoom-in'),fit=toolbar.querySelector('#map-fit');
   function geometry(){const viewport=surface.querySelector('.map-viewport'),content=surface.querySelector('.map-content');return viewport&&content?{viewport,content,w:viewport.clientWidth,h:Math.max(1,viewport.clientHeight),cw:content.offsetWidth,ch:content.offsetHeight}:null;}
   function paint(){
@@ -22,16 +22,18 @@
     pan.y=g.ch*zoom<=g.h?(g.h-g.ch*zoom)/2:Math.min(24,Math.max(g.h-g.ch*zoom-24,pan.y));
     g.content.style.transform=`translate(${pan.x}px, ${pan.y}px) scale(${zoom})`;
     toolbar.querySelector('#map-zoom-level').textContent=Math.round(zoom*100)+'%';
-    minus.disabled=zoom<=.1;plus.disabled=zoom>=2.5;
+    minus.disabled=zoom<=.1;plus.disabled=zoom>=2.5;g.viewport.classList.toggle('map-zoomed-out',zoom<.7);
   }
   function fitMap(){cancelAnimationFrame(fitting);fitting=requestAnimationFrame(()=>{const g=geometry();if(!g)return;if(initial&&!active){zoom=Math.max(.6,Math.min((g.w-24)/g.cw,1));pan={x:0,y:12};initial=false;}else if(autoFit)zoom=Math.max(.1,Math.min((g.w-24)/g.cw,(g.h-24)/g.ch,1.25));paint();});}
   function changeZoom(factor){const g=geometry();if(!g)return;autoFit=false;const next=Math.max(.1,Math.min(2.5,zoom*factor));pan={x:g.w/2-(g.w/2-pan.x)*next/zoom,y:g.h/2-(g.h/2-pan.y)*next/zoom};zoom=next;paint();}
   minus.onclick=()=>changeZoom(1/1.2);plus.onclick=()=>changeZoom(1.2);fit.onclick=()=>{autoFit=true;fitMap();};
-  surface.addEventListener('pointerdown',e=>{if(e.button!==0||e.target.closest('button,select,a,input')||!geometry())return;drag={id:e.pointerId,x:e.clientX,y:e.clientY,px:pan.x,py:pan.y};surface.classList.add('map-is-dragging','map-pointer-focused');surface.focus({preventScroll:true});e.preventDefault();surface.setPointerCapture(e.pointerId);});
+  surface.addEventListener('pointerdown',e=>{if(e.button!==0||e.target.closest('button,select,a,input,summary,.map-tray')||!geometry())return;drag={id:e.pointerId,x:e.clientX,y:e.clientY,px:pan.x,py:pan.y};surface.classList.add('map-is-dragging','map-pointer-focused');surface.focus({preventScroll:true});e.preventDefault();surface.setPointerCapture(e.pointerId);});
   // Pointer panning should not draw a keyboard focus ring around the canvas.
   document.addEventListener('keydown',()=>surface.classList.remove('map-pointer-focused'),true);
   surface.addEventListener('blur',()=>surface.classList.remove('map-pointer-focused'));
   surface.addEventListener('pointermove',e=>{if(!drag||drag.id!==e.pointerId)return;autoFit=false;pan={x:drag.px+e.clientX-drag.x,y:drag.py+e.clientY-drag.y};paint();});
+  // On touch screens the inline map is a preview: a tap on its background opens the full screen map.
+  surface.addEventListener('pointerup',e=>{if(drag&&drag.id===e.pointerId&&!active&&e.pointerType!=='mouse'&&coarse.matches&&Math.hypot(e.clientX-drag.x,e.clientY-drag.y)<8)enter();});
   function endDrag(){drag=null;surface.classList.remove('map-is-dragging');}
   ['pointerup','pointercancel','lostpointercapture'].forEach(type=>surface.addEventListener(type,endDrag));window.addEventListener('blur',endDrag);
   surface.addEventListener('keydown',e=>{if(!geometry()||e.target.matches('select,input,textarea')||e.ctrlKey||e.metaKey||e.altKey)return;
@@ -42,6 +44,8 @@
     const isMap = Boolean(surface.querySelector('.map-viewport'));
     control.hidden = !isMap; toolbar.hidden = !isMap;hint.hidden=!isMap;navigation.hidden=!isMap;if(!isMap)endDrag();
     frame.classList.toggle("is-map",isMap);
+    hint.textContent=!coarse.matches?'Drag background to pan · + / − zoom · 0 fit':active?'Drag to pan · + / − to zoom · Fit shows all':'Tap the map for full screen · swipe sideways to pan';
+    document.querySelector('.map-focus-header small').textContent=coarse.matches?'Tap ⤢ to return':'Esc to return';
     if(branch!==state.branch){branch=state.branch;autoFit=active;initial=!active;}
     if (active && !isMap) { exit(); return; }
     document.body.classList.toggle('map-fullscreen', active);
@@ -91,6 +95,7 @@
   new ResizeObserver(fitMap).observe(frame);
   window.addEventListener('resize', fitMap);
   document.fonts.ready.then(fitMap);
+  coarse.addEventListener('change',sync);
   window.syncMapFullscreen = sync;
   sync();
 })();

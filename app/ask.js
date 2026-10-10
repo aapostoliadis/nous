@@ -32,7 +32,7 @@ function finishAsk(query, result) {
   state.askResults ||= {};
   const labels = { changed:'Workspace updated', found:'From your workspace', unmatched:'No matching information', pending:'Your input is needed', error:'Connection needs attention' };
   state.askResults[state.branch] = { query, kind:'found', ...result, label:labels[result.kind || 'found'] };
-  if (result.view) state.view = result.view;
+  if (result.view === 'actions') reviewOpen = true; else if (result.view) state.view = result.view;
   state.showAskResult = true;
   render();
   document.querySelector('#inspector .inspector-scroll').scrollTop = 0;
@@ -129,7 +129,7 @@ function answerAsk(raw) {
   }
   if (/^(?:edit|change|update)\s+(?:the |shared |our )?(?:context|goal)\s*$/i.test(t)) { askPending(text,editContext,()=>({kind:'changed',title:'Context updated.',answer:state.goal,change:'Goal and constraints updated across all branches.'}));return true; }
   if (/^(?:show|open|review|approve|execute)\s+(?:the |proposed )?actions?\b/i.test(t)) return finish({title:'Action ready for review.',answer:'Inspect the proposed brief, its inputs and its destination. Approval is required before the local download.',view:'actions',change:'Opened the action review. Nothing has run.'});
-  if (/^(?:show|open|go to|view)\s+(?:the )?(?:map|workspace)\s*$/i.test(t)) return finish({title:'Map opened.',answer:`${current().length} objects belong to this branch. Select an object to inspect its context.`,view:'map'});
+  if (/^(?:show|open|go to|view)\s+(?:the )?(?:map|workspace)\s*$/i.test(t)) return finish({title:'Map opened.',answer:`${plural(current().length,'object')} ${current().length===1?'belongs':'belong'} to this branch. Select an object to inspect its context.`,view:'map'});
   if (target && /^(?:open|show|inspect|explain|summari[sz]e|what is|tell me about)\s+@/i.test(t)) return finish({title:target.title,answer:target.body,ids:[target.id,...target.links],view:target.type==='decision'?'decisions':target.type==='evidence'||target.type==='source'?'evidence':'map'});
 
   // Questions return existing material with references, never invented research.

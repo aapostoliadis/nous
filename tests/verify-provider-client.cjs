@@ -2,11 +2,11 @@ const vm=require('node:vm'),fs=require('node:fs'),assert=require('node:assert/st
 const source=fs.readFileSync('app/connections.js','utf8');
 const tick=()=>new Promise(r=>setImmediate(r));
 async function fixture(stored={}){
- const elements=new Map();const element=id=>elements.get(id)||elements.set(id,{value:'',dataset:{},textContent:'',hidden:false,disabled:false,setAttribute(){},scrollIntoView(){},focus(){}}).get(id);
+ const elements=new Map();const element=id=>elements.get(id)||elements.set(id,{value:'',dataset:{},textContent:'',hidden:false,disabled:false,setAttribute(){},scrollIntoView(){},focus(){},selectedOptions:[],classList:{toggle(){},contains:()=>false},addEventListener(){},contains:()=>false,get parentElement(){return element(id+':parent')}}).get(id);
  let resolveAsk, rejectAsk;const pending=new Promise((r,j)=>{resolveAsk=r;rejectAsk=j});
  const state={goal:'Test',constraints:[],branch:'main',objects:[{id:'Q01',branch:'main',type:'question',title:'Timing?',body:'Needs research',links:[]}],selected:null};
- const results=[];let askOpts;const context={state,render(){},window:{submitAsk(){results.push('local')},addEventListener(){}},localStorage:{getItem:key=>stored[key]??null,setItem(){}},document:{querySelector:element},AbortController,crypto:require('node:crypto').webcrypto,setTimeout,clearTimeout,innerWidth:1200,current:()=>state.objects.filter(o=>o.branch===state.branch),finishAsk:(query,result)=>results.push(result),toast:msg=>results.push(msg),esc:x=>x,modal(){},fetch:async(url,opts)=>{
-  if(url.startsWith('/api/models'))return {ok:true,json:async()=>({defaultModel:'test-model',models:[{id:'test-model',name:'Test model'}]})};
+ const results=[];let askOpts;const context={state,render(){},window:{submitAsk(){results.push('local')},addEventListener(){}},localStorage:{getItem:key=>stored[key]??null,setItem(){}},document:{querySelector:element,addEventListener(){}},AbortController,crypto:require('node:crypto').webcrypto,setTimeout,clearTimeout,innerWidth:1200,current:()=>state.objects.filter(o=>o.branch===state.branch),finishAsk:(query,result)=>results.push(result),toast:msg=>results.push(msg),esc:x=>x,modal(){},fetch:async(url,opts)=>{
+  if(url.startsWith('/api/models'))return {ok:true,json:async()=>({defaultModel:'test-model',models:[{id:'test-model',name:'Test model',mode:'responses'}]})};
   if(url==='/api/providers')return {ok:true,json:async()=>({providers:[{id:'openai',label:'OpenAI',configured:true,model:'test-model'},{id:'anthropic',label:'Claude',configured:false,model:'test-model'}]})};
   askOpts=opts;opts.signal.addEventListener('abort',()=>rejectAsk(Object.assign(new Error('cancelled'),{name:'AbortError'})));return pending;
  }};

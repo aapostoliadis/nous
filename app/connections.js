@@ -23,6 +23,21 @@
   const vendor=p=>({openai:'OpenAI',anthropic:'Anthropic'})[p.id]||p.label;
   const keyStatus=p=>({tab:'Your key · this tab',device:'Your key · this device'})[saved(p.id)?.place]||(p.configured?'Server key · .env.local':'API key needed');
   const orb=document.querySelector('#connection-orb');
+  // The picker sits behind a chip: most asks reuse the last model, so the controls only take space when changed.
+  const chip=document.querySelector('#model-chip'),controls=chip.parentElement;
+  const textModes=['responses','chat','messages'],ALL='__all__',showAllModels=new Set();
+  function setPicker(open){controls.classList.toggle('picker-open',open);chip.setAttribute('aria-expanded',String(open));}
+  chip.onclick=()=>{const open=!controls.classList.contains('picker-open');setPicker(open);if(open)selector.focus();};
+  controls.addEventListener('keydown',e=>{if(e.key==='Escape'&&controls.classList.contains('picker-open')){e.stopPropagation();setPicker(false);chip.focus();}});
+  document.addEventListener('click',e=>{if(!controls.contains(e.target))setPicker(false);});
+  // Ask only sends text; audio models live under Audio tools. Long catalogs start with a short suggested list.
+  function fillModels(provider,catalog,wanted){
+    const text=catalog.models.filter(m=>textModes.includes(m.mode)),option=m=>`<option value="${esc(m.id)}">${esc(m.name)}</option>`;
+    if(showAllModels.has(provider)||text.length<=4)modelSelect.innerHTML=textModes.map(mode=>{const models=text.filter(m=>m.mode===mode);return models.length?`<optgroup label="${({'responses':'Text · current','chat':'Text · other','messages':'Claude'})[mode]}">${models.map(option).join('')}</optgroup>`:'';}).join('')||'<option value="">No text models available</option>';
+    else{const picks=[...new Set([catalog.defaultModel,wanted,...text.filter(m=>m.structured).map(m=>m.id)])].map(id=>text.find(m=>m.id===id)).filter(Boolean).slice(0,4);modelSelect.innerHTML=`<optgroup label="Suggested">${picks.map(option).join('')}</optgroup><option value="${ALL}">Show all ${text.length} models…</option>`;}
+    modelSelect.value=text.some(m=>m.id===wanted)?wanted:(text.find(m=>m.id===catalog.defaultModel)?.id||text[0]?.id||'');
+    modelSelect.title=`${text.length} text models available to your API account. Audio models are under Audio tools; app-only, image and research modes are separate.`;
+  }
   function syncOrb(){orb.setAttribute('state',active?'working':'connecting');orb.hidden=!active&&!checking&&!modelsLoading;}
   window.renderModelProgress=()=>progress&&progress.branch===state.branch?`<section class="model-progress" aria-label="Answer in progress"><div class="inspector-eyebrow">THINKING WITH ${esc(progress.label)}</div><div class="stream-status"><nous-orb state="working" size="24"></nous-orb><span role="status">${progress.answer?'Writing your answer…':'Working through your request…'}</span></div><p class="ask-query">${esc(progress.prompt)}</p><p class="inspector-body ask-answer model-stream-answer">${esc(progress.answer||'')}</p><p class="source-note">${progress.answer?'Answer in progress. Workspace changes appear when complete.':'Using this branch’s goal, constraints and linked objects.'}</p></section>`:'';
   function showAnswer(answer){
@@ -56,6 +71,8 @@
     const p=providers.find(p=>p.id===selector.value);
     connection.textContent=selector.value==='local'?'Local commands':ready(p)?(modelsLoading?'Loading models…':modelError||'Ready'):p?'API key needed':'Checking connection…';
     connection.dataset.ready=String(ready(p));
+    const model=!modelSelect.hidden&&modelSelect.value?modelSelect.selectedOptions[0]?.text:'';
+    chip.textContent=[selector.selectedOptions[0]?.text.split(' · ')[0],model].filter(Boolean).join(' · ');
   }
   async function refresh() {
     checking++;syncOrb();
@@ -75,15 +92,13 @@
       if(force||!catalog){const response=await fetch('/api/models?provider='+encodeURIComponent(provider)+(force?'&refresh=1':''),{headers:window.providerHeaders(provider)});const data=await response.json();if(!response.ok)throw Error(data.error||'Models unavailable');catalog=data;modelCatalogs.set(provider,catalog);}
       if(request!==modelRequest)return;
       const wanted=chosenModels[provider]||catalog.defaultModel;
-      modelSelect.innerHTML=['responses','chat','messages','transcription','speech','audio-chat','realtime'].map(mode=>{const models=catalog.models.filter(m=>m.mode===mode);return models.length?`<optgroup label="${({'responses':'Text · current','chat':'Text · other','messages':'Claude','transcription':'Audio · Transcribe','speech':'Audio · Read aloud','audio-chat':'Audio · Conversation','realtime':'Audio · Live voice'})[mode]}">${models.map(m=>`<option value="${esc(m.id)}">${esc(m.name)}</option>`).join('')}</optgroup>`:'';}).join('')||'<option value="">No text models available</option>';
-      modelSelect.value=catalog.models.some(m=>m.id===wanted)?wanted:(catalog.models.find(m=>m.id===catalog.defaultModel)?.id||catalog.models[0]?.id||'');
+      fillModels(provider,catalog,wanted);
       if(modelSelect.value){chosenModels[provider]=modelSelect.value;saveModelPreference();}
-      modelSelect.title=`${catalog.models.length} models available to your API account. Audio models open their specialist tools. App-only, image and research modes are separate.`;
     }catch(error){if(request!==modelRequest)return;modelError=error.message;modelSelect.innerHTML='<option value="">Models unavailable</option>';}
     finally{if(request===modelRequest){modelsLoading=false;modelSelect.disabled=!!active||!modelSelect.value;refreshModels.disabled=!!active;syncOrb();describe();}}
   }
   function saveModelPreference(){try{localStorage.setItem('nous-models',JSON.stringify(chosenModels));}catch{}}
-  modelSelect.onchange=()=>{chosenModels[selector.value]=modelSelect.value;saveModelPreference();describe();};
+  modelSelect.onchange=()=>{if(modelSelect.value===ALL){showAllModels.add(selector.value);fillModels(selector.value,modelCatalogs.get(selector.value),chosenModels[selector.value]);try{modelSelect.showPicker();}catch{}return;}setPicker(false);chosenModels[selector.value]=modelSelect.value;saveModelPreference();describe();};
   refreshModels.onclick=()=>loadModels(true);
   selector.onchange=()=>{try{localStorage.setItem('nous-provider',selector.value);}catch{}loadModels(false);};
   document.querySelector('#connections').onclick=()=>{

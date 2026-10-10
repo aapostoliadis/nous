@@ -92,3 +92,87 @@ h3{font-size:14px!important}
  body:not(.map-fullscreen) .surface-frame{min-height:0}
  body:not(.map-fullscreen) #inspector{height:100%;min-height:0}
 }
+/* Map: connectors keep their drawn scale when placed objects deepen the canvas. */
+.map-space>.connectors{height:434px;bottom:auto}
+/* Selection: unrelated objects recede, the selected object's relationships come forward. */
+.has-selection .node.dimmed{opacity:.38;filter:saturate(.4)}
+.has-selection .node.related:not(.selected){border-color:#8fb3a1}
+.has-selection .connectors g{opacity:.25}
+.has-selection .connectors g.active{opacity:1}
+.connectors g.active path{stroke:#2f6b52;stroke-width:2.5}
+.connectors g.active text{fill:#24543f;font-weight:600}
+.node,.connectors g{transition:opacity .18s ease,filter .18s ease}
+@media(prefers-reduced-motion:reduce){.node,.connectors g{transition:none}}
+/* Zoomed out, titles carry the map; body text and footers would be unreadable. */
+.map-zoomed-out .node p,.map-zoomed-out .node-foot{display:none}
+.map-zoomed-out .node h3{font-size:22px!important;line-height:1.2}
+.map-zoomed-out .node{min-height:0}
+/* Unplaced objects wait in a tray until they are positioned on the map. */
+.map-tray{position:absolute;top:12px;right:12px;z-index:3;width:260px;max-height:calc(100% - 24px);display:flex;flex-direction:column;background:#fff;border:1px solid #e0e6e2;border-radius:14px;box-shadow:0 10px 25px #1518230f;cursor:default}
+.map-tray summary{padding:10px 14px;font-size:12px;font-weight:600;color:#295b44;cursor:pointer;list-style-position:inside}
+.map-tray summary:focus-visible{outline:2px solid #295b44;outline-offset:-2px;border-radius:12px}
+.map-tray>p{margin:0;padding:0 14px 8px;font-size:11px;color:#5b6168}
+.map-tray ul{margin:0;padding:0 8px 8px;list-style:none;overflow-y:auto;min-height:0}
+.map-tray li{display:flex;align-items:center;gap:6px;padding:4px;border-radius:10px;cursor:grab}
+.map-tray li:hover{background:#f4f6f5}
+.tray-object{flex:1;min-width:0;display:grid;gap:3px;justify-items:start;padding:6px;border:0;background:none;text-align:left;font:inherit}
+.tray-object .type{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#5b6168}
+.tray-object strong{font-size:13px;font-weight:500;line-height:1.3;overflow-wrap:anywhere}
+.tray-place{flex:none;min-height:32px;padding:4px 10px;border:1px solid #d7e3da;border-radius:8px;background:#edf4ef;color:#295b44;font-size:11px;font-weight:600}
+.tray-place:hover{background:#e1ece5}
+
+/* P1 #4: proposal review as a slide-over, reachable on every width */
+.review-chip{display:none;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:7px 12px;background:#fff;font-size:12px;color:var(--ink)}
+.review-chip.has-proposal{border-color:#8fb3a1;background:#e9f1ed;color:#1f4a36;font-weight:600}
+@media(max-width:850px){.review-chip{display:inline-flex}}
+.review-scrim{position:fixed;inset:0;z-index:60;background:#151823;opacity:.32}
+.review-panel{position:fixed;top:0;right:0;bottom:0;z-index:61;width:min(720px,100vw);overflow:auto;background:var(--paper);box-shadow:-24px 0 60px #15182333;padding:20px 24px 40px;animation:review-in .22s ease-out}
+.review-panel:focus{outline:none}
+.review-panel .view-page{padding:12px 0 0;max-width:none}
+.review-back{border:1px solid var(--line);background:#fff;border-radius:999px;padding:9px 14px;font-size:13px;color:var(--ink);cursor:pointer}
+.review-back:hover{background:var(--green-light)}
+body.review-open{overflow:hidden}
+@keyframes review-in{from{transform:translateX(40px);opacity:0}to{transform:none;opacity:1}}
+@media(prefers-reduced-motion:reduce){.review-panel{animation:none}}
+@media(max-width:850px){.review-panel{padding:14px 16px 32px}}
+
+/* P1 #6: provider and model picker behind a chip */
+.model-chip{display:inline-flex;align-items:center;gap:6px;min-height:40px;max-width:260px;padding:0 14px;border:1px solid #d8dcd4;border-radius:999px;background:#fff;color:#22302a;font:inherit;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
+.model-chip::after{content:"▾";font-size:11px;color:#56605a}
+.model-chip[aria-expanded="true"]{background:#e9f1ed;border-color:#9fbfae;color:#1f4a36}
+.model-chip:empty{display:none}
+.provider-controls:not(.picker-open) :is(#ai-provider,#ai-model,#refresh-models){display:none}
+@media(max-width:850px){.model-chip{max-width:calc(100vw - 150px)}}
+
+/* P1 #7: Rejected is an exit from Candidate, not a step after Superseded */
+.state-strip{display:grid;grid-template-columns:repeat(7,auto);justify-content:start;align-items:center;column-gap:6px;row-gap:6px}
+.state-strip .state-arrow{font-style:normal;color:var(--muted)}
+.state-strip .state-exit{grid-column:3;display:flex;align-items:center;gap:6px;padding:0!important;background:none!important;color:var(--muted)}
+@media(max-width:500px){.state-strip{column-gap:3px}.state-strip span{padding:7px 8px}}
+/* P1 #7: status chips to WCAG AA (4.5:1) at their 11px size; hues kept, text darkened */
+.state.candidate,.state.idea,.state.proposed{color:#845a0f}
+.state.decided,.state.completed{color:#1c7243}
+.state.superseded{background:#f1f2f4;color:#5d636e}
+.state-strip span:not(.current):not(.rejected):not(.state-exit){color:#5d636e}
+/* P1 #8: Map/List switch, object list, Ask row pinned on small screens. */
+.map-mode{display:inline-flex;gap:2px;padding:3px;background:#fff;border:1px solid #e0e6e2;border-radius:999px;box-shadow:0 4px 14px #15182314}
+.map-viewport>.map-mode{position:absolute;top:12px;left:12px;z-index:3}
+.map-mode button{min-height:32px;padding:0 14px;border:0;border-radius:999px;background:none;color:#5d636e;font-size:12px;font-weight:600;cursor:pointer}
+.map-mode button[aria-pressed=true]{background:#295b44;color:#fff}
+.map-mode button:focus-visible{outline:2px solid #295b44;outline-offset:2px}
+.object-list .map-mode{margin-bottom:20px}
+.object-list section{margin-bottom:22px}
+.object-list h3{margin:0 0 8px;font:600 12px/1.4 var(--sans);letter-spacing:.08em;text-transform:uppercase;color:#5d636e}
+.object-list h3 span{color:#295b44}
+.object-list ul{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.object-row{width:100%;min-height:44px;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;text-align:left;background:#fff;border:1px solid #e0e6e2;border-radius:12px;color:inherit;cursor:pointer}
+.object-row b{font-weight:600}
+.object-row .state{flex-shrink:0}
+.object-row:hover{border-color:#9fb8aa}
+.object-row.selected{border-color:#295b44;box-shadow:0 0 0 1px #295b44}
+@media(max-width:850px){
+ .map-mode button{min-height:44px}
+ .map-viewport>.map-mode~.map-tray{width:auto;max-width:calc(100% - 150px)}
+ body:not(.map-fullscreen) #command-form{position:fixed;left:10px;right:10px;bottom:calc(10px + env(safe-area-inset-bottom));z-index:20;background:#fffffff2;border-color:#e0e6e2;box-shadow:0 8px 28px #15182326}
+ body:not(.map-fullscreen){padding-bottom:calc(70px + env(safe-area-inset-bottom))}
+}
