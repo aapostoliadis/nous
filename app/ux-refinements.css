@@ -84,13 +84,17 @@ h3{font-size:14px!important}
  #command-form button[type=submit]{width:33px;height:33px;min-width:33px;min-height:33px}
  body:not(.map-fullscreen) .inspector-scroll{height:auto;overflow:visible}
 }
-/* Desktop shell allocates remaining viewport height to the workspace. */
-@media(min-width:851px) and (min-height:650px){
- body:not(.map-fullscreen){height:100dvh;display:flex;flex-direction:column;overflow:hidden}
+/* Desktop: the workspace fills spare viewport height but never shrinks below a
+   usable map; on shorter screens the page scrolls, so no view hides its buttons
+   inside a clipped inner scroller. */
+@media(min-width:851px){
+ body:not(.map-fullscreen){min-height:100dvh;display:flex;flex-direction:column}
  body:not(.map-fullscreen)>:is(.topbar,.goal-header,.viewbar,.command-dock){flex-shrink:0}
- body:not(.map-fullscreen) #main{flex:1;min-height:0;height:auto}
- body:not(.map-fullscreen) .surface-frame{min-height:0}
- body:not(.map-fullscreen) #inspector{height:100%;min-height:0}
+ body:not(.map-fullscreen) #main{flex:1 0 auto;min-height:560px;height:auto}
+ body:not(.map-fullscreen) .is-map #surface{min-height:440px}
+ body:not(.map-fullscreen) .surface-frame:not(.is-map) #surface{height:auto;overflow:visible}
+ body:not(.map-fullscreen) #inspector{height:auto}
+ body:not(.map-fullscreen) .inspector-scroll{height:auto;overflow:visible}
 }
 /* Map: connectors keep their drawn scale when placed objects deepen the canvas. */
 .map-space>.connectors{height:434px;bottom:auto}
