@@ -24,7 +24,7 @@
     toolbar.querySelector('#map-zoom-level').textContent=Math.round(zoom*100)+'%';
     minus.disabled=zoom<=.1;plus.disabled=zoom>=2.5;g.viewport.classList.toggle('map-zoomed-out',zoom<.7);
   }
-  function fitMap(){cancelAnimationFrame(fitting);fitting=requestAnimationFrame(()=>{const g=geometry();if(!g)return;if(initial&&!active){zoom=Math.max(.6,Math.min((g.w-24)/g.cw,1));pan={x:0,y:12};initial=false;}else if(autoFit)zoom=Math.max(.1,Math.min((g.w-24)/g.cw,(g.h-24)/g.ch,1.25));paint();});}
+  function fitMap(){cancelAnimationFrame(fitting);fitting=requestAnimationFrame(()=>{const g=geometry();if(!g)return;if(initial&&!active){zoom=Math.max(.6,Math.min((g.w-24)/g.cw,(g.h-24)/g.ch,1));pan={x:0,y:12};initial=false;}else if(autoFit)zoom=Math.max(.1,Math.min((g.w-24)/g.cw,(g.h-24)/g.ch,1.25));paint();});}
   function changeZoom(factor){const g=geometry();if(!g)return;autoFit=false;const next=Math.max(.1,Math.min(2.5,zoom*factor));pan={x:g.w/2-(g.w/2-pan.x)*next/zoom,y:g.h/2-(g.h/2-pan.y)*next/zoom};zoom=next;paint();}
   minus.onclick=()=>changeZoom(1/1.2);plus.onclick=()=>changeZoom(1.2);fit.onclick=()=>{autoFit=true;fitMap();};
   surface.addEventListener('pointerdown',e=>{if(e.button!==0||e.target.closest('button,select,a,input,summary,.map-tray')||!geometry())return;drag={id:e.pointerId,x:e.clientX,y:e.clientY,px:pan.x,py:pan.y};surface.classList.add('map-is-dragging','map-pointer-focused');surface.focus({preventScroll:true});e.preventDefault();surface.setPointerCapture(e.pointerId);});
