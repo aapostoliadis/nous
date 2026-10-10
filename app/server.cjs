@@ -14,8 +14,9 @@ async function handler(req,res){
   const host=String(req.headers.host||'').toLowerCase();
   if(!hosts.has(host)) return json(res,403,{error:'Host not allowed.'});
   if(req.headers.origin && (hosted ? req.headers.origin!==`https://${host}` : ![`http://localhost:${port}`,`http://127.0.0.1:${port}`].includes(req.headers.origin))) return json(res,403,{error:'Origin not allowed.'});
-  if(req.headers['sec-fetch-site']==='cross-site') return json(res,403,{error:'Origin not allowed.'});
   let url;try{url=decodeURIComponent(new URL(req.url,'http://localhost').pathname);}catch{return json(res,400,{error:'Invalid path.'});}
+  // A link from another site (search, social, the Vercel dashboard) must open the page; other sites still can't call the API or load assets.
+  if(req.headers['sec-fetch-site']==='cross-site'&&!(req.headers['sec-fetch-mode']==='navigate'&&['GET','HEAD'].includes(req.method)&&!url.startsWith('/api/'))) return json(res,403,{error:'Origin not allowed.'});
   if(url==='/api/providers'&&req.method==='GET') return json(res,200,{providers:status(),hosted});
   if(url==='/api/models'&&req.method==='GET') {
     const params=new URL(req.url,'http://localhost').searchParams;

@@ -52,6 +52,9 @@ if(!process.argv.includes('--fixture')){
       assert.equal((await request('/',{headers:{Host:'attacker.example'}})).status,403);
       assert.equal((await request('/api/providers',{headers:{Origin:'https://attacker.example'}})).status,403);
       assert.equal((await request('/api/providers',{headers:{'Sec-Fetch-Site':'cross-site'}})).status,403);
+      assert.equal((await request('/',{headers:{'Sec-Fetch-Site':'cross-site','Sec-Fetch-Mode':'navigate'}})).status,200,'A link from another site must open the page');
+      assert.equal((await request('/api/providers',{headers:{'Sec-Fetch-Site':'cross-site','Sec-Fetch-Mode':'navigate'}})).status,403);
+      assert.equal((await request('/app.js',{headers:{'Sec-Fetch-Site':'cross-site','Sec-Fetch-Mode':'no-cors'}})).status,403);
       const status=await request('/api/providers',{headers:{Origin:origin}});assert.equal(status.status,200);assert.equal(JSON.parse(status.body).hosted,hosted);
       assert.equal((await request('/api/connections/anthropic',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json'},body:'{"key":"fixture-only"}'})).status,405,'Server-side key saving is removed');
       assert.equal((await request('/api/models?provider=openai',{headers:{Origin:origin,'X-Provider-Key':userKey}})).status,200);assert.equal(modelKey,userKey);
