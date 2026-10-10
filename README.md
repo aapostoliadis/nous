@@ -1,5 +1,7 @@
 # Nous
 
+[![Keep the Why](https://keepthewhy.com/assets/badge.svg)](https://keepthewhy.com)
+
 A local, LLM-native workspace for thought. Goals, evidence, assumptions, questions, decisions and artifacts persist as linked objects across Map, Branches, Evidence, Decisions and Document views.
 
 ## Run locally
