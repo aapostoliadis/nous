@@ -8,7 +8,7 @@ const hosted=process.env.VERCEL==='1';
 const hosts=new Set(hosted
   ? [process.env.VERCEL_URL,process.env.VERCEL_PROJECT_PRODUCTION_URL,process.env.VERCEL_BRANCH_URL,...(process.env.NOUS_ALLOWED_HOSTS||'').split(',')].filter(Boolean).map(host=>host.trim().toLowerCase())
   : [`localhost:${port}`,`127.0.0.1:${port}`]);
-const publicFiles=new Set(['index.html','app.js','ask.js','connections.js','map-fullscreen.js','style.css','kit-theme.css','dropdowns.css','map-fullscreen.css','ask.css','connections.css','thinking-orbs.js','audio-tools.js','dictation.js','ux-refinements.css','vendor/thinking-orbs/engine.es.js']);
+const publicFiles=new Set(['index.html','app.js','ask.js','connections.js','map-fullscreen.js','style.css','kit-theme.css','dropdowns.css','map-fullscreen.css','ask.css','connections.css','thinking-orbs.js','audio-tools.js','dictation.js','ux-refinements.css','dark-theme.css','theme.js','vendor/thinking-orbs/engine.es.js']);
 function json(res,code,data){res.writeHead(code,{'Content-Type':'application/json','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'});res.end(JSON.stringify(data));}
 async function handler(req,res){
   const host=String(req.headers.host||'').toLowerCase();
