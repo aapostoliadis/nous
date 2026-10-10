@@ -115,8 +115,10 @@ reason, and why four was chosen as the cap.
 previous behaviour). Inferred reason: the length and failing choices
 above.
 
-**Consequence:** the audio branch in `submitAsk` can no longer be
-reached from the Ask picker; whether to remove it is open.
+**Consequence:** the audio branch in `submitAsk` could no longer be
+reached from the Ask picker, so it was removed (nous commit 11a2ea1,
+2026-10-10). Audio models stay reachable through the Audio tools button
+(`app/audio-tools.js`).
 
 ## Mobile and touch get a list view, tap for full screen, and a pinned Ask bar
 
@@ -125,6 +127,7 @@ reached from the Ask picker; whether to remove it is open.
 **Status:** active
 **Evidence:** inferred
 **Source:** UI review of the live site, 2026-10-09/10; P1 change #8 in the nous repository (uncommitted as of 2026-10-10)
+**See:** nous-interface.md#on-desktop-only-the-ask-input-is-pinned — fafb4ccb-a9ea-4fb3-90b1-9d7b8a4dc56c — as of 2026-10-10
 **Revisit when:** the change is tested on a real touch device rather than browser emulation
 
 Three changes for small and touch screens:
@@ -152,3 +155,37 @@ discussed.
 **Consequence:** the Map/List choice is not remembered between visits,
 and switching to List leaves full screen. Touch behaviour was checked
 only by emulation.
+
+## On desktop only the Ask input is pinned
+
+**Id:** fafb4ccb-a9ea-4fb3-90b1-9d7b8a4dc56c
+**Type:** decision
+**Status:** active
+**Evidence:** inferred
+**Source:** nous commits 12e13e4 and 11a2ea1, 2026-10-10
+**See:** nous-interface.md#mobile-and-touch-get-a-list-view-tap-for-full-screen-and-a-pinned-ask-bar — 53830926-23c2-4b86-a3d9-7e5f78ba1a18 — as of 2026-10-10
+
+Above 850px, `#command-form` is `position:fixed` at the bottom of the
+window (`app/ux-refinements.css`), with a blurred backing strip
+(`body::after`, 82px) so page content does not show around it while
+scrolling. The scope line and suggestions in `.command-dock` scroll with
+the page and sit above the input at the end of it. In full screen map
+the form is not pinned.
+
+**Reason:** the Ask bar should stay visible on desktop, as it already
+did on mobile. Pinning the whole dock took about 175px of the viewport;
+pinning only the input keeps Ask in reach for 82px.
+
+**Which parts are confirmed:** that the Ask bar must stay visible on
+desktop, and the choice of pinning only the input row over the whole
+dock (both asked for by the maintainer). Inferred: that the space cost
+was the deciding reason; it was how the option was described when it was
+picked, not stated by the maintainer.
+
+**Rejected alternative:** pin the entire `.command-dock` with
+`position:sticky` (commit 12e13e4, replaced in 11a2ea1). Rejected for
+the ~175px it covered.
+
+**Consequence:** desktop and ≤850px now pin the same element, so the two
+layouts behave alike. Pages get 82px of bottom padding on desktop (70px
+on mobile) so their last content is not hidden behind the input.
