@@ -1,0 +1,6 @@
+# Store text as LF and check it out as LF on every OS, so Windows checkouts
+# stop warning about line-ending conversion.
+* text=auto eol=lf
+
+*.png binary
+*.woff2 binary
