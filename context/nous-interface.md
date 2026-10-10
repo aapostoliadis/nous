@@ -6,7 +6,7 @@
 **Type:** decision
 **Status:** active
 **Evidence:** inferred
-**Source:** UI review of the live site, 2026-10-09/10; P1 changes #3/#4 in the nous repository (uncommitted as of 2026-10-10)
+**Source:** UI review of the live site, 2026-10-09/10; P1 changes #3/#4, nous commit 9b9f873
 **See:** nous-interface.md#mobile-and-touch-get-a-list-view-tap-for-full-screen-and-a-pinned-ask-bar — 53830926-23c2-4b86-a3d9-7e5f78ba1a18 — as of 2026-10-10
 
 Reviewing proposals no longer switches the app to a separate Actions
@@ -42,7 +42,7 @@ reduced-motion turns off its slide-in animation.
 **Type:** decision
 **Status:** active
 **Evidence:** inferred
-**Source:** UI review of the live site, 2026-10-09/10; P1 change #4 in the nous repository (uncommitted as of 2026-10-10)
+**Source:** UI review of the live site, 2026-10-09/10; P1 change #4, nous commit 9b9f873
 
 The Decisions lifecycle strip reads Idea → Candidate → Decided →
 Superseded, with `↳ Rejected` drawn under Candidate as a side exit (the
@@ -68,7 +68,7 @@ the reason.
 **Type:** decision
 **Status:** active
 **Evidence:** inferred
-**Source:** UI review of the live site, 2026-10-09/10; P1 change #5 in the nous repository (uncommitted as of 2026-10-10)
+**Source:** UI review of the live site, 2026-10-09/10; P1 change #5, nous commit 9b9f873
 **See:** nous-interface.md#ask-lists-only-text-models-led-by-a-short-suggested-list — e11f7752-553e-4995-9bfc-d00ce802f6ea — as of 2026-10-10
 
 The provider and model controls for Ask are collapsed behind
@@ -94,7 +94,7 @@ behaviour). Inferred reason: the space cost above.
 **Type:** decision
 **Status:** active
 **Evidence:** inferred
-**Source:** UI review of the live site, 2026-10-09/10; P1 change #6 in the nous repository (uncommitted as of 2026-10-10)
+**Source:** UI review of the live site, 2026-10-09/10; P1 change #6, nous commit 9b9f873
 
 The Ask model list keeps only models that can answer in text (the
 responses, chat or messages modes). Audio models are listed under Audio
@@ -126,7 +126,7 @@ reached from the Ask picker, so it was removed (nous commit 11a2ea1,
 **Type:** decision
 **Status:** active
 **Evidence:** inferred
-**Source:** UI review of the live site, 2026-10-09/10; P1 change #8 in the nous repository (uncommitted as of 2026-10-10)
+**Source:** UI review of the live site, 2026-10-09/10; P1 change #8, nous commit 9b9f873
 **See:** nous-interface.md#on-desktop-only-the-ask-input-is-pinned — fafb4ccb-a9ea-4fb3-90b1-9d7b8a4dc56c — as of 2026-10-10
 **Revisit when:** the change is tested on a real touch device rather than browser emulation
 
@@ -152,9 +152,11 @@ for these particular fixes and the 8px threshold.
 **Alternatives:** unknown — no other fixes for these problems were
 discussed.
 
-**Consequence:** the Map/List choice is not remembered between visits,
-and switching to List leaves full screen. Touch behaviour was checked
-only by emulation.
+**Consequence:** the Map/List choice is saved per device in its own
+`localStorage` key (`nous-map-layout`), apart from the saved workspace,
+so it survives reloads. Switching to List leaves full screen, since full
+screen applies only to the map. Touch behaviour was checked only by
+emulation.
 
 ## On desktop only the Ask input is pinned
 
