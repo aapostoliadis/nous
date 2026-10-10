@@ -95,6 +95,8 @@ h3{font-size:14px!important}
  body:not(.map-fullscreen) .surface-frame:not(.is-map) #surface{height:auto;overflow:visible}
  body:not(.map-fullscreen) #inspector{height:auto}
  body:not(.map-fullscreen) .inspector-scroll{height:auto;overflow:visible}
+ /* The Ask bar stays in reach while the page scrolls. */
+ body:not(.map-fullscreen)>.command-dock{position:sticky;bottom:0;z-index:5;background:#f3f4f6eb;backdrop-filter:blur(18px)}
 }
 /* Map: connectors keep their drawn scale when placed objects deepen the canvas. */
 .map-space>.connectors{height:434px;bottom:auto}
