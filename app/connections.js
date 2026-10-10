@@ -130,8 +130,6 @@
   cancel.onclick=()=>active?.abort();
   window.submitAsk=async()=>{
     if(active)return;
-    const audioModel=modelCatalogs.get(selector.value)?.models.find(m=>m.id===modelSelect.value);
-    if(audioModel&&['transcription','speech','audio-chat','realtime'].includes(audioModel.mode))return window.openAudioTools?.(audioModel);
     if(selector.value==='local')return localSubmit();
     const input=document.querySelector('#command'),prompt=input.value.trim();
     if(!prompt){input.focus();return;}

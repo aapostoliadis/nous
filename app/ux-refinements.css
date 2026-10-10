@@ -95,9 +95,15 @@ h3{font-size:14px!important}
  body:not(.map-fullscreen) .surface-frame:not(.is-map) #surface{height:auto;overflow:visible}
  body:not(.map-fullscreen) #inspector{height:auto}
  body:not(.map-fullscreen) .inspector-scroll{height:auto;overflow:visible}
- /* The Ask bar stays in reach while the page scrolls. */
- body:not(.map-fullscreen)>.command-dock{position:sticky;bottom:0;z-index:5;background:#f3f4f6eb;backdrop-filter:blur(18px)}
+ /* Only the Ask input stays in reach while the page scrolls; context and suggestions scroll with the page. */
+ body:not(.map-fullscreen) #command-form{position:fixed;left:32px;right:32px;bottom:16px;z-index:5;background:#fffffff2;border-color:#e0e6e2;box-shadow:0 8px 28px #1518231f}
+ body:not(.map-fullscreen){padding-bottom:82px}
+ body:not(.map-fullscreen)::after{content:'';position:fixed;left:0;right:0;bottom:0;height:82px;z-index:4;background:#f3f4f6eb;backdrop-filter:blur(18px);pointer-events:none}
 }
+@media(min-width:851px) and (max-width:1200px){body:not(.map-fullscreen) #command-form{left:24px;right:24px}}
+/* Muted text meets the 4.5:1 contrast minimum on the page and panel backgrounds. */
+.brand-note,.views button:not([aria-selected=true]):not(:hover),.inspector-eyebrow,.page-kicker,.page-intro,.branch-note,.suggestions>span{color:#5f6573}
+kbd{color:#5d6558}
 /* Map: connectors keep their drawn scale when placed objects deepen the canvas. */
 .map-space>.connectors{height:434px;bottom:auto}
 /* Selection: unrelated objects recede, the selected object's relationships come forward. */
