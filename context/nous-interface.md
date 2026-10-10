@@ -213,13 +213,15 @@ as "add a question: …" to the model instead of changing the workspace,
 and without a saved key they failed with "Connect this provider first".
 Commands change local state that the model cannot change directly.
 
-**Which parts are confirmed:** that commands must work with any provider
-(asked for by the maintainer). Inferred: the reason as worded, and that
-"draft a brief" stays local (it rebuilds the brief from workspace
-objects) rather than going to a selected model — offered as an open
-choice and not yet decided by the maintainer.
+**Which parts are confirmed:** that commands must work with any provider,
+and that "draft a brief" stays local with a model selected (both decided
+by the maintainer, the latter on 2026-10-10). Inferred: the reason as
+worded.
 
-**Alternatives:** unknown — no other routing was discussed.
+**Rejected alternative:** let a selected model write the brief. Reason
+for rejecting it: not stated by the maintainer; the local version
+rebuilds the brief from the workspace objects and keeps their
+references attached.
 
 **Consequence:** a reference to a missing object (`@X99`) is answered
 locally with "Object not found" before any model is asked, as it was
