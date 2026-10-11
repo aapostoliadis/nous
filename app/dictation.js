@@ -69,6 +69,7 @@
   }
   async function start(){
     if(form.getAttribute('aria-busy')==='true'){message('Wait for the current Ask request to finish before dictating.');return;}
+    if(window.providerReady?.('openai')===false){message('Add your OpenAI API key in Connections to dictate.',true);return;}
     if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder){message('This browser cannot record audio. Open Nous in a browser with microphone support.',true);return;}
     const mime=['audio/webm;codecs=opus','audio/mp4','audio/ogg;codecs=opus','audio/webm'].find(t=>MediaRecorder.isTypeSupported(t));
     if(!mime){message('This browser does not support a compatible recording format.',true);return;}
