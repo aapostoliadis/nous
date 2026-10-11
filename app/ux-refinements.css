@@ -205,3 +205,5 @@ dialog .field-hint{display:block;margin-top:6px;font-size:12px;font-weight:400;l
  .map-viewport>.surface-heading .branch-switch{flex:1}
  .map-viewport>.surface-heading>span{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
 }
+/* "Review decision" links meet the 24px minimum target (WCAG 2.5.8). */
+.decision-row .row-meta button{min-height:24px;display:inline-flex;align-items:center}
