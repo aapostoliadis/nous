@@ -207,3 +207,6 @@ dialog .field-hint{display:block;margin-top:6px;font-size:12px;font-weight:400;l
 }
 /* "Review decision" links meet the 24px minimum target (WCAG 2.5.8). */
 .decision-row .row-meta button{min-height:24px;display:inline-flex;align-items:center}
+.branch-root{color:var(--muted)}
+.branch-card button{min-height:24px;display:inline-flex;align-items:center}
+.doc-section .ref{min-height:24px;display:flex;align-items:center;width:fit-content}
