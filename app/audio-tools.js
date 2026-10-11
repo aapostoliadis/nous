@@ -71,6 +71,7 @@
       }catch(e){if(!closed){stopVoice();message(e.name==='AbortError'?'Cancelled. Your inputs have been kept.':e.name==='NotAllowedError'?'Microphone permission was not granted. You can use a recording instead.':e.message,true);}}
       finally{clearTimeout(timer);request=null;if(!closed&&!pc)setBusy(false);}
     };
+    if(window.providerReady?.('openai')===false){orb.hidden=true;run.disabled=true;model.innerHTML='<option value="">Connect provider first</option>';message('Add your OpenAI API key in Connections.',true);return;}
     try{const r=await fetch('/api/models?provider=openai',{headers:window.providerHeaders?.('openai')||{}});const data=await r.json();if(!r.ok)throw Error(data.error);if(closed)return;catalog=data.models;if(selected)mode.value=selected.mode;update();if(selected&&catalog.some(m=>m.id===selected.id))model.value=selected.id;}
     catch(e){if(!closed){orb.hidden=true;message(e.message,true);}}
   };

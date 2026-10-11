@@ -33,6 +33,7 @@
     try{
       // Discover models after capture, so a slow connection cannot lose opening words.
       if(!model){
+        if(window.providerReady?.('openai')===false)throw Error('Add your OpenAI API key in Connections.');
         const r=await fetch('/api/models?provider=openai',{headers:window.providerHeaders?.('openai')||{},signal:controller.signal});const data=await r.json();if(!r.ok)throw Error(data.error||'Connect OpenAI to transcribe your speech.');
         if(token!==generation)return;
         const models=data.models.filter(m=>m.mode==='transcription'&&!m.id.includes('diarize'));

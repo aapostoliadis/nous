@@ -20,6 +20,8 @@
   function saveKey(id,key,remember){forgetKey(id);const s=store(remember?'device':'tab');if(!s)throw Error('This browser is blocking storage, so the key cannot be kept.');s.setItem(keyName(id),key);}
   window.providerHeaders=id=>{const key=saved(id)?.key;return key?{'X-Provider-Key':key}:{};};
   const ready=p=>!!p&&(p.configured||!!saved(p.id));
+  // null until the provider list loads, so callers only skip a request when no key is known to exist.
+  window.providerReady=id=>{const p=providers.find(p=>p.id===id);return p?ready(p):null;};
   const vendor=p=>({openai:'OpenAI',anthropic:'Anthropic'})[p.id]||p.label;
   const keyStatus=p=>({tab:'Your key · this tab',device:'Your key · this device'})[saved(p.id)?.place]||(p.configured?'Server key · .env.local':'API key needed');
   const orb=document.querySelector('#connection-orb');
