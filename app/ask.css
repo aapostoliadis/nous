@@ -1,13 +1,13 @@
-.ask-query{border-left:2px solid #91b7a3;padding-left:12px;margin-bottom:18px;font-size:12px;line-height:1.6;color:#64666e;overflow-wrap:anywhere}
-.ask-status{display:inline-flex;align-items:center;border-radius:99px;padding:6px 10px;background:#edf1f5;color:#526b83;font-size:12px;font-weight:500}
-.ask-status.changed{background:#e7f5ec;color:#1d6e41}.ask-status.unmatched,.ask-status.pending{background:#fff4df;color:#8a5d10}
+.ask-query{border-left:2px solid #91b7a3;padding-left:12px;margin-bottom:18px;font-size:12px;line-height:1.6;color:var(--muted);overflow-wrap:anywhere}
+.ask-status{display:inline-flex;align-items:center;border-radius:99px;padding:6px 10px;background:var(--blue-bg,#edf1f5);color:var(--blue);font-size:12px;font-weight:500}
+.ask-status.changed{background:var(--green-bg,#e7f5ec);color:#1d6e41}.ask-status.unmatched,.ask-status.pending{background:var(--amber-bg,#fff4df);color:var(--amber,#8a5d10)}
 .ask-answer{white-space:pre-line;overflow-wrap:anywhere}
-.ask-change{background:#ffffffba;border:1px solid #fff;border-radius:14px;padding:14px;font-size:12px;line-height:1.65;color:#4b504e;margin:18px 0}
+.ask-change{background:var(--raised,#ffffffba);border:1px solid #fff;border-radius:14px;padding:14px;font-size:12px;line-height:1.65;color:#4b504e;margin:18px 0}
 .ask-change>span{display:block;font-size:12px;letter-spacing:1px;color:#5f656e;margin-bottom:6px}
 .ask-object-list{display:grid;gap:9px;margin-top:12px}
-.ask-object-list button{display:block;width:100%;background:#ffffffd9;border:1px solid #fff;border-radius:14px;padding:13px;text-align:left;overflow-wrap:anywhere}
-.ask-object-list button:hover{border-color:#bdd0c6;background:#f2f7f4}
-.ask-object-list strong{display:block;font-size:12px;line-height:1.5;font-weight:500;margin:7px 0;color:#151823}
+.ask-object-list button{display:block;width:100%;background:var(--raised,#ffffffd9);border:1px solid #fff;border-radius:14px;padding:13px;text-align:left;overflow-wrap:anywhere}
+.ask-object-list button:hover{border-color:var(--accent-line,#bdd0c6);background:var(--accent-bg,#f2f7f4)}
+.ask-object-list strong{display:block;font-size:12px;line-height:1.5;font-weight:500;margin:7px 0;color:var(--ink)}
 .ask-excerpt{display:block;color:#64666e;font-size:12px;line-height:1.65}
 .ask-footnote{font-size:12px;line-height:1.7;color:#5f656e;margin-top:22px}
 .ask-save-question{margin-top:8px;font-size:12px;white-space:normal}
