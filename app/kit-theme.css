@@ -19,7 +19,7 @@ button:focus-visible,a:focus-visible{outline-offset:3px}
 h1{font-size:30px;font-weight:500;letter-spacing:-1.1px;line-height:1.22;margin:12px 0}
 .goal-bottom{font-size:12px;color:#64666e}.context-chip{color:#7d818a;font-size:12px}
 .action-peek{border:1px solid #fff;background:var(--surface,#ffffffa8);padding:16px 20px;border-radius:24px;min-width:288px;box-shadow:var(--card-shadow);gap:14px}
-.action-peek:hover{background:var(--raised,#fff)}.action-orbit{width:42px;height:42px;border:0;background:linear-gradient(145deg,#fff,#e9e9e9);color:var(--ink);box-shadow:0 2px 4px #1518230a}
+.action-peek:hover{background:var(--raised,#fff)}.action-orbit{width:42px;height:42px;border:0;background:linear-gradient(145deg,var(--raised-2,#fff),var(--raised,#e9e9e9));color:var(--ink);box-shadow:0 2px 4px #1518230a}
 .action-peek small{font-size:12px;letter-spacing:1.2px}.action-peek strong{font-size:13px;letter-spacing:-.15px}.action-peek span span{font-size:12px}
 .viewbar{height:74px;padding:0 32px 14px;border:0;gap:24px}
 .views{height:54px;gap:4px;padding:4px;background:var(--surface,#e9eaee99);border:1px solid #ffffffb3;border-radius:99px;align-items:center}
@@ -40,7 +40,7 @@ main{gap:24px;margin:0 32px;height:calc(100vh - 458px);min-height:552px}
 .node{background:var(--raised,#fff);border:1px solid #fff;border-radius:var(--card-radius);box-shadow:var(--card-shadow);padding:19px 18px 16px;min-height:168px}
 .node h3{font-size:18px;font-weight:500;line-height:1.35;letter-spacing:-.55px;margin-bottom:10px}.node-header{margin-bottom:13px}.node p{font-size:12px;line-height:1.6;color:#5f656e}.node-foot{border-color:#f0f1f3;font-size:12px;padding-top:11px}.object-id{font-size:12px;color:var(--subtle,#969ba5)}.type{letter-spacing:.9px;font-size:12px}
 .node:hover{border-color:#bdd0c6;box-shadow:0 5px 12px #15182305,0 16px 32px #15182308}.node.selected{border-color:var(--accent,#66917e);box-shadow:0 0 0 3px #295b4410,0 10px 25px #15182305}
-.node.claim{background:linear-gradient(135deg,#fff,#edf4ef);border-color:#dce8df;min-height:178px}.node.claim h3{color:var(--accent-strong,#214d37)}
+.node.claim{background:linear-gradient(135deg,var(--raised,#fff),var(--accent-bg,#edf4ef));border-color:#dce8df;min-height:178px}.node.claim h3{color:var(--accent-strong,#214d37)}
 .node.assumption,.node.artifact{top:248px}.node.question{top:270px}.node.claim{top:38px}
 .state{border-radius:99px;padding:4px 8px;font-size:12px}.state.candidate,.state.idea,.state.proposed{background:var(--amber-bg,#fff4df);color:#8a5d10}.state.decided,.state.completed{background:var(--green-bg,#e7f5ec);color:#258c52}.state.rejected,.state.superseded,.state.declined{background:#f1f2f4;color:#757b86}
 .map-legend{bottom:20px;left:28px;font-size:12px;gap:18px}

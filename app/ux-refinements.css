@@ -181,7 +181,7 @@ body.review-open{overflow:hidden}
 .object-row b{font-weight:600}
 .object-row .state{flex-shrink:0}
 .object-row:hover{border-color:var(--accent-line,#9fb8aa)}
-.object-row.selected{border-color:var(--accent,#295b44);box-shadow:0 0 0 1px #295b44}
+.object-row.selected{border-color:var(--accent,#295b44);box-shadow:0 0 0 1px var(--accent,#295b44)}
 @media(max-width:850px){
  .map-mode button{min-height:44px}
  .map-viewport>.map-mode~.map-tray{width:auto;max-width:calc(100% - 150px)}
