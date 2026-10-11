@@ -1,6 +1,6 @@
 .provider-controls{display:flex;align-items:center;gap:10px;margin-left:auto}
 .provider-controls select{font:600 12px Inter,sans-serif;color:#28563f;background:#eef3ef;border:1px solid #d7e3da;border-radius:18px;padding:7px 12px;min-width:145px;cursor:pointer}
-#connection-status{font-size:10px;color:#64666e}
+#connection-status{font-size:12px;color:#64666e}
 #connections{font-size:11px;color:#28563f;text-decoration:underline;text-underline-offset:3px}
 #cancel-ask{font-size:11px;color:#64666e}
 #cancel-ask[hidden]{display:none}

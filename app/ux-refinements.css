@@ -6,7 +6,7 @@
 .skip-link{position:fixed;top:8px;left:16px;z-index:100;background:white;color:#295b44;padding:14px;border-radius:12px;transform:translateY(-150%)}.skip-link:focus{transform:none}
 .map-tools{position:absolute;right:18px;bottom:18px;z-index:5;display:flex;align-items:center;gap:4px;padding:5px;background:#fff;border:1px solid #dfe6e1;border-radius:17px;box-shadow:0 3px 15px #15182312}
 .map-tools[hidden]{display:none}.map-tools button{min-width:44px;height:44px;border-radius:11px;color:#295b44;font-size:23px}.map-tools button:hover{background:#edf4ef}.map-tools button:disabled{opacity:.35;cursor:default}
-.map-tools #map-fit{min-width:58px;font-size:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px}.map-tools #map-fit small{font-size:10px;color:#64666e}
+.map-tools #map-fit{min-width:58px;font-size:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px}.map-tools #map-fit small{font-size:11px;color:#64666e}
 .map-tools #map-fullscreen{position:static;width:44px;height:44px;box-shadow:none;border:0;border-left:1px solid #e3e5e9;border-radius:0 11px 11px 0}
 .is-map #surface{overflow:hidden}.is-map .map-viewport{position:relative;width:100%;height:100%;overflow:hidden;touch-action:pan-y pinch-zoom}
 .is-map .map-content{position:absolute;left:0;top:0;width:1100px;height:auto;transform-origin:top left}
@@ -22,11 +22,11 @@ dialog:has(#audio-form){width:min(660px,calc(100vw - 32px));max-height:calc(100d
  .viewbar{height:auto;flex-wrap:wrap}.views{width:100%;justify-content:space-between;overflow:visible}.views button{min-width:0;min-height:44px;flex:1;padding:0 5px;font-size:11px}.views button span{display:none}.view-right{margin-left:auto}
  .provider-controls{display:grid;grid-template-columns:1fr 1fr 44px;align-items:center;width:100%}.provider-controls select{width:100%;min-width:0!important;max-width:none!important;font-size:13px}#connection-status{grid-column:1/-1}#connections,#audio-tools,#cancel-ask{min-height:44px}#connection-orb{grid-column:3;grid-row:2}#connection-status{padding-right:30px}#audio-tools{grid-column:1}#connections{grid-column:2}#cancel-ask{grid-column:3}
  #command{font-size:16px;min-width:0}#command-form button{min-width:44px;min-height:44px}.command-context b{font-size:12px}.suggestions{flex-wrap:wrap}.suggestions button{min-height:44px;font-size:11px}.command-dock{padding-bottom:calc(14px + env(safe-area-inset-bottom))}
- .topbar #save-status{font-size:10px;max-width:95px}.source-note,.context-footer{font-size:12px}.inspector-body,.doc-section p,.branch-card p,.decision-row p{font-size:16px}
+ .topbar #save-status{font-size:11px;max-width:95px}.source-note,.context-footer{font-size:12px}.inspector-body,.doc-section p,.branch-card p,.decision-row p{font-size:16px}
  .map-tools{right:12px;bottom:12px}.audio-layout{grid-template-columns:1fr}.audio-wide{grid-column:auto}dialog{padding:24px}dialog input,dialog select,dialog textarea{font-size:16px!important}.decision-row{grid-template-columns:1fr}.decision-row .row-meta{grid-column:1}.action-footer button,.branch-tools button,.inspector-controls button{min-height:44px}.surface-frame{min-height:420px}
 }
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
-.map-pan-hint{position:absolute;left:22px;bottom:34px;color:#64666e;font-size:11px;pointer-events:none}.map-pan-hint[hidden]{display:none}@media(max-width:1100px){.map-pan-hint{bottom:78px;font-size:10px;background:#f8f9fbd9;padding:4px 8px;border-radius:6px}}
+.map-pan-hint{position:absolute;left:22px;bottom:34px;color:#64666e;font-size:11px;pointer-events:none}.map-pan-hint[hidden]{display:none}@media(max-width:1100px){.map-pan-hint{bottom:78px;font-size:11px;background:#f8f9fbd9;padding:4px 8px;border-radius:6px}}
 
 [hidden]{display:none!important}
 @media(max-width:850px){
@@ -51,7 +51,7 @@ dialog:has(#audio-form){width:min(660px,calc(100vw - 32px));max-height:calc(100d
 #command-form #ask-microphone:hover{background:#e1ece5}#command-form #ask-microphone[aria-pressed=true]{color:#ad231b;background:#feeceb;border-color:#e6b4b1}
 #command-form #ask-microphone:disabled{cursor:wait;opacity:.55}
 #dictation-feedback{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:8px 0;font-size:12px;color:#295b44}#dictation-feedback[data-error=true]{color:#ad231b}#dictation-feedback button{min-height:40px;padding:6px 12px;border:1px solid #d7e3da;border-radius:12px;background:#fff;font-size:12px}#dictation-overflow{width:100%;min-height:90px;border:1px solid #d7e3da;border-radius:12px;padding:12px;font:inherit;background:#fff}
-@media(max-width:850px){.map-navigation{padding:10px}.map-navigation .map-pan-hint{font-size:10px;padding:7px 9px}.map-navigation .map-tools{padding:3px}#command-form{gap:7px}#dictation-feedback button{min-height:44px}}
+@media(max-width:850px){.map-navigation{padding:10px}.map-navigation .map-pan-hint{font-size:11px;padding:7px 9px}.map-navigation .map-tools{padding:3px}#command-form{gap:7px}#dictation-feedback button{min-height:44px}}
 
 /* Keep the native file picker accessible while matching Nous controls. */
 #audio-file{padding:6px;color:#606570;background:#fff;cursor:pointer}
@@ -128,7 +128,7 @@ kbd{color:#5d6558}
 .map-tray li{display:flex;align-items:center;gap:6px;padding:4px;border-radius:10px;cursor:grab}
 .map-tray li:hover{background:#f4f6f5}
 .tray-object{flex:1;min-width:0;display:grid;gap:3px;justify-items:start;padding:6px;border:0;background:none;text-align:left;font:inherit}
-.tray-object .type{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#5b6168}
+.tray-object .type{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#5b6168}
 .tray-object strong{font-size:13px;font-weight:500;line-height:1.3;overflow-wrap:anywhere}
 .tray-place{flex:none;min-height:32px;padding:4px 10px;border:1px solid #d7e3da;border-radius:8px;background:#edf4ef;color:#295b44;font-size:11px;font-weight:600}
 .tray-place:hover{background:#e1ece5}
@@ -187,4 +187,21 @@ body.review-open{overflow:hidden}
  .map-viewport>.map-mode~.map-tray{width:auto;max-width:calc(100% - 150px)}
  body:not(.map-fullscreen) #command-form{position:fixed;left:10px;right:10px;bottom:calc(10px + env(safe-area-inset-bottom));z-index:20;background:#fffffff2;border-color:#e0e6e2;box-shadow:0 8px 28px #15182326}
  body:not(.map-fullscreen){padding-bottom:calc(70px + env(safe-area-inset-bottom))}
+}
+/* Small text links still get a 24px click target. */
+:is(#edit-context,#last-ask-result,#clear-selection):not([hidden]){min-height:24px;display:inline-flex;align-items:center}
+.object-links button,.context-group li>button{min-height:24px}
+dialog .field-hint{display:block;margin-top:6px;font-size:12px;font-weight:400;letter-spacing:0;text-transform:none;line-height:1.5;color:#5f656e}
+/* Map heading sits outside the scaled .map-content so the branch picker keeps its real size. */
+.map-viewport>.surface-heading{position:absolute;top:12px;left:140px;z-index:3;display:flex;align-items:center;gap:10px;max-width:calc(100% - 152px);padding:3px 3px 3px 14px;background:#fff;border:1px solid #e0e6e2;border-radius:999px;box-shadow:0 4px 14px #15182314;cursor:default}
+.map-viewport>.surface-heading>span{white-space:nowrap}
+.map-viewport>.surface-heading .branch-switch{display:flex;align-items:center;gap:4px;min-width:0}
+.map-viewport>.surface-heading select{min-height:32px;min-width:0;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.map-viewport>.surface-heading:has(~.map-tray){max-width:calc(100% - 424px)}
+@media(max-width:850px){
+ .map-viewport>.surface-heading,.map-viewport>.surface-heading:has(~.map-tray){top:76px;left:12px;max-width:calc(100% - 24px)}
+ .map-viewport>.surface-heading select{min-height:44px;max-width:none;flex:1}
+ .map-viewport>.surface-heading{padding-left:12px;right:12px}
+ .map-viewport>.surface-heading .branch-switch{flex:1}
+ .map-viewport>.surface-heading>span{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
 }

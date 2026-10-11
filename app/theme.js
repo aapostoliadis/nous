@@ -1,6 +1,7 @@
 // Styles: light plus three dark palettes. Loaded in <head> so the style is set
 // before first paint. A style picked in the menu is saved per device; without
-// one, the system setting decides (light or Warm ink) and is followed live.
+// one (or after picking System), the system setting decides (light or Warm ink)
+// and is followed live.
 (()=>{
   const KEY='nous-theme',root=document.documentElement,system=matchMedia('(prefers-color-scheme: dark)'),still=matchMedia('(prefers-reduced-motion: reduce)');
   const THEMES={light:'Light',graphite:'Graphite',forest:'Forest',warm:'Warm ink'},DARK_DEFAULT='warm';
@@ -10,8 +11,9 @@
   const apply=theme=>{
     root.dataset.theme=theme;
     if(theme==='light')delete root.dataset.mode;else root.dataset.mode='dark';
-    const b=document.getElementById('theme-button');if(b){b.setAttribute('aria-label',`Style: ${THEMES[theme]}`);b.title=b.getAttribute('aria-label')}
-    document.querySelectorAll('[data-theme-option]').forEach(o=>o.setAttribute('aria-pressed',String(o.dataset.themeOption===theme)));
+    const choice=saved()||'system';
+    const b=document.getElementById('theme-button');if(b){b.setAttribute('aria-label',`Style: ${choice==='system'?`System (${THEMES[theme]})`:THEMES[theme]}`);b.title=b.getAttribute('aria-label')}
+    document.querySelectorAll('[data-theme-option]').forEach(o=>o.setAttribute('aria-pressed',String(o.dataset.themeOption===choice)));
   };
   // Reveal the new style in a circle growing from (x,y); fade colours where
   // View Transitions are unavailable; switch instantly under reduced motion.
@@ -40,8 +42,9 @@
     });
     menu.addEventListener('click',e=>{
       const o=e.target.closest('[data-theme-option]');if(!o)return;
-      const theme=o.dataset.themeOption,box=o.querySelector('.theme-swatch').getBoundingClientRect();
-      try{localStorage.setItem(KEY,theme)}catch{}
+      const option=o.dataset.themeOption,box=o.querySelector('.theme-swatch').getBoundingClientRect();
+      try{option==='system'?localStorage.removeItem(KEY):localStorage.setItem(KEY,option)}catch{}
+      const theme=option==='system'?fromSystem():option;
       switchTo(theme,box.left+box.width/2,box.top+box.height/2,()=>close(false));
       button.focus();
     });

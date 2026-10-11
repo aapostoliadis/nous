@@ -15,19 +15,21 @@
   toolbar.innerHTML='<button type="button" id="map-zoom-out" aria-label="Zoom out map" title="Zoom out">−</button><button type="button" id="map-fit" aria-label="Fit map to view" title="Fit all objects"><span id="map-zoom-level">100%</span><small>Fit</small></button><button type="button" id="map-zoom-in" aria-label="Zoom in map" title="Zoom in">+</button>';
   control.before(toolbar);toolbar.append(control);const hint=document.createElement("div");hint.className="map-pan-hint";const coarse=matchMedia("(pointer:coarse)");const navigation=document.createElement("div");navigation.className="map-navigation";frame.append(navigation);navigation.append(hint,toolbar);
   const minus=toolbar.querySelector('#map-zoom-out'),plus=toolbar.querySelector('#map-zoom-in'),fit=toolbar.querySelector('#map-fit');
-  function geometry(){const viewport=surface.querySelector('.map-viewport'),content=surface.querySelector('.map-content');return viewport&&content?{viewport,content,w:viewport.clientWidth,h:Math.max(1,viewport.clientHeight),cw:content.offsetWidth,ch:content.offsetHeight}:null;}
+  function geometry(){const viewport=surface.querySelector('.map-viewport'),content=surface.querySelector('.map-content');return viewport&&content?{viewport,content,w:viewport.clientWidth,h:Math.max(1,viewport.clientHeight),cw:content.offsetWidth,ch:content.offsetHeight,top:controlsBottom(viewport)}:null;}
+  // The Map/List toggle and Unplaced tray float over the map; fitted content starts below them.
+  function controlsBottom(viewport){const v=viewport.getBoundingClientRect().top;return Math.max(0,...[...viewport.querySelectorAll(':scope>.map-mode,:scope>.surface-heading,:scope>.map-tray>summary')].map(e=>e.getBoundingClientRect().bottom-v+8));}
   function paint(){
     const g=geometry();if(!g)return;
     pan.x=g.cw*zoom<=g.w?(g.w-g.cw*zoom)/2:Math.min(24,Math.max(g.w-g.cw*zoom-24,pan.x));
-    pan.y=g.ch*zoom<=g.h?(g.h-g.ch*zoom)/2:Math.min(24,Math.max(g.h-g.ch*zoom-24,pan.y));
+    pan.y=g.ch*zoom<=g.h-g.top?g.top+(g.h-g.top-g.ch*zoom)/2:Math.min(Math.max(24,g.top),Math.max(g.h-g.ch*zoom-24,pan.y));
     g.content.style.transform=`translate(${pan.x}px, ${pan.y}px) scale(${zoom})`;
     toolbar.querySelector('#map-zoom-level').textContent=Math.round(zoom*100)+'%';
     minus.disabled=zoom<=.1;plus.disabled=zoom>=2.5;g.viewport.classList.toggle('map-zoomed-out',zoom<.7);
   }
-  function fitMap(){cancelAnimationFrame(fitting);fitting=requestAnimationFrame(()=>{const g=geometry();if(!g)return;if(initial&&!active){zoom=Math.max(.6,Math.min((g.w-24)/g.cw,(g.h-24)/g.ch,1));pan={x:0,y:12};initial=false;}else if(autoFit)zoom=Math.max(.1,Math.min((g.w-24)/g.cw,(g.h-24)/g.ch,1.25));paint();});}
+  function fitMap(){cancelAnimationFrame(fitting);fitting=requestAnimationFrame(()=>{const g=geometry();if(!g)return;if(initial&&!active){zoom=Math.max(.6,Math.min((g.w-24)/g.cw,(g.h-24)/g.ch,1));pan={x:0,y:Math.max(12,g.top)};initial=false;}else if(autoFit)zoom=Math.max(.1,Math.min((g.w-24)/g.cw,(g.h-g.top-24)/g.ch,1.25));paint();});}
   function changeZoom(factor){const g=geometry();if(!g)return;autoFit=false;const next=Math.max(.1,Math.min(2.5,zoom*factor));pan={x:g.w/2-(g.w/2-pan.x)*next/zoom,y:g.h/2-(g.h/2-pan.y)*next/zoom};zoom=next;paint();}
   minus.onclick=()=>changeZoom(1/1.2);plus.onclick=()=>changeZoom(1.2);fit.onclick=()=>{autoFit=true;fitMap();};
-  surface.addEventListener('pointerdown',e=>{if(e.button!==0||e.target.closest('button,select,a,input,summary,.map-tray')||!geometry())return;drag={id:e.pointerId,x:e.clientX,y:e.clientY,px:pan.x,py:pan.y};surface.classList.add('map-is-dragging','map-pointer-focused');surface.focus({preventScroll:true});e.preventDefault();surface.setPointerCapture(e.pointerId);});
+  surface.addEventListener('pointerdown',e=>{if(e.button!==0||e.target.closest('button,select,a,input,summary,.map-tray,.surface-heading')||!geometry())return;drag={id:e.pointerId,x:e.clientX,y:e.clientY,px:pan.x,py:pan.y};surface.classList.add('map-is-dragging','map-pointer-focused');surface.focus({preventScroll:true});e.preventDefault();surface.setPointerCapture(e.pointerId);});
   // Pointer panning should not draw a keyboard focus ring around the canvas.
   document.addEventListener('keydown',()=>surface.classList.remove('map-pointer-focused'),true);
   surface.addEventListener('blur',()=>surface.classList.remove('map-pointer-focused'));
