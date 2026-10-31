@@ -101,7 +101,7 @@
         <div class="ag-actions"><button type="button" class="ag-primary" data-act="keys">Manage API keys</button><span class="ag-model">${esc(pick().ok?'Ready to run':'Add a key and choose a model to run agents')}</span></div></section>
       <section class="ag-card ag-settings"><h2>What agents can do</h2><p>Agents write: briefs, plans, critiques, drafts and summaries, from your request and, if you allow it, your workspace. They cannot browse the web, search, send email or act in other apps, and they say so rather than pretend.</p>
         <p>Agents and results are stored only in this browser. Each run sends the agent's instructions, your request and any workspace context to the provider you chose.</p>
-        <div class="ag-actions"><button type="button" class="ag-danger" data-act="wipe">Delete all agents and results</button></div></section>`;
+        <div class="ag-actions"><button type="button" data-act="export"${db.agents.length?'':' disabled'}>Export agents</button><button type="button" data-act="import">Import agents</button><input type="file" id="ag-import" accept="application/json,.json" hidden aria-label="Agents file to import"><button type="button" class="ag-danger" data-act="wipe">Delete all agents and results</button></div></section>`;
   }
   function vAgent(){
     const a=agentById(openId);if(!a){view='agents';return vAgents();}
@@ -219,6 +219,8 @@
       case 'keys':return $('#connections').click();
       case 'cancel':return running?.ctrl.abort();
       case 'wipe':if(confirm('Delete every agent, result and draft stored in this browser? Workspace objects are not affected.')){db={agents:[],runs:[],draft:null};w=null;persist();go('agents');toast('All agents and results deleted.');}return;
+      case 'export':{const url=URL.createObjectURL(new Blob([JSON.stringify({nous:'agents',version:1,agents:db.agents},null,2)],{type:'application/json'}));const link=document.createElement('a');link.href=url;link.download='nous-agents.json';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);toast(`Exported ${db.agents.length} agent${db.agents.length===1?'':'s'}. Results and keys are not included.`);return;}
+      case 'import':return root.querySelector('#ag-import')?.click();
       case 'exit':saveDraft();toast(w.editingId?'Changes kept as a draft.':'Draft saved. Pick it up from New agent.');return go(w.editingId?'agent':'agents',w.editingId||openId);
       case 'prev':if(w.step===1&&w.qi>0)w.qi--;else if(w.step===2&&w.questions.length&&!w.editingId){w.step=1;w.qi=w.questions.length-1;}else w.step=Math.max(0,w.step===2&&!w.questions.length?0:w.step-1);saveDraft();draw();return focusHead();
       case 'skip':w.redraft=true;return toIdentity();
@@ -237,6 +239,8 @@
   root.addEventListener('change',e=>{
     const t=e.target;
     if(t.dataset.toggle&&w){w[t.dataset.toggle]=t.checked;saveDraft();root.querySelector('#ag-preview').innerHTML=preview();}
+    // Imports agents only: results stay in the browser that made them, and an agent already here (same id) is left as it is.
+    if(t.id==='ag-import'&&t.files[0])t.files[0].text().then(text=>{const list=JSON.parse(text)?.agents;if(!Array.isArray(list))throw 0;const str=v=>typeof v==='string'?v.trim():'';let added=0;for(const x of list){if(!str(x?.name)||!str(x?.instructions)||db.agents.some(a=>a.id===x.id))continue;const now=new Date().toISOString();db.agents.push({id:str(x.id)||crypto.randomUUID(),created:str(x.created)||now,name:str(x.name),description:str(x.description),instructions:str(x.instructions),starter:str(x.starter),goal:str(x.goal),answers:Array.isArray(x.answers)?x.answers.filter(q=>typeof q?.question==='string'&&typeof q?.answer==='string'):[],useWorkspace:!!x.useWorkspace,saveToWorkspace:!!x.saveToWorkspace,updated:str(x.updated)||now});added++;}persist();draw();toast(added?`Imported ${added} agent${added===1?'':'s'}.`:'No new agents in that file.');}).catch(()=>toast('That file is not a Nous agents export.')).finally(()=>{t.value='';});
     if(t.dataset.mirror){const real=$('#'+t.dataset.mirror);real.value=t.value;real.dispatchEvent(new Event('change'));real.onchange?.();setTimeout(draw,t.dataset.mirror==='ai-provider'?1500:0);}
   });
   root.addEventListener('submit',e=>{
