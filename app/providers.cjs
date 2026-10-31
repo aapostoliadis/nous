@@ -102,17 +102,18 @@ function validateResult(value,workspace) {
     return {type:o.type,title:o.title,body:o.body,links:links(o.links)};
   })};
 }
-async function ask(input,fetchImpl=fetch,signal,onProgress) {
+// One provider round trip shared by workspace asks and agents: validates the chosen model, sends the
+// request (streamed when onProgress is given) and returns the raw JSON text the model produced.
+async function complete(input,{system,content,schema:format,name},fetchImpl=fetch,signal,onProgress) {
   const p=providers[input?.provider]; if(!p) fail('Choose ChatGPT or Claude.');
   const env=config(), cred=credentials(input.provider,input.key);
-  const workspace=contextFor(input), model=input.model||env[p.modelEnv]||p.model;
+  const model=input.model||env[p.modelEnv]||p.model;
   if(!boundedString(model,200))fail('Choose a valid model.');
   const catalog=await listModels(input.provider,{fetchImpl,key:input.key});
   const chosen=catalog.models.find(m=>m.id===model);
   if(!chosen)fail('This model is not in your available text models. Refresh the model list and choose again.');
   if(!['responses','chat','messages'].includes(chosen.mode))fail('Open Audio tools to use this specialist model.');
-  const content=JSON.stringify({request:input.prompt,workspace});
-  const system=instructions+(chosen.structured?'':` Return only JSON matching this schema, with no markdown fences: ${JSON.stringify(schema)}`);
+  system+=chosen.structured?'':` Return only JSON matching this schema, with no markdown fences: ${JSON.stringify(format)}`;
   const headers={'content-type':'application/json'};
   let body,url=p.url;
   if(input.provider==='openai') {
@@ -120,11 +121,11 @@ async function ask(input,fetchImpl=fetch,signal,onProgress) {
     if(chosen.mode==='chat'){
       url='https://api.openai.com/v1/chat/completions';
       body={model,store:false,messages:[{role:'system',content:system},{role:'user',content}],max_completion_tokens:4096};
-    }else body={model,store:false,instructions:system,input:content,max_output_tokens:5000,...(chosen.structured?{text:{format:{type:'json_schema',name:'nous_workspace_result',strict:true,schema}}}:{})};
+    }else body={model,store:false,instructions:system,input:content,max_output_tokens:5000,...(chosen.structured?{text:{format:{type:'json_schema',name,strict:true,schema:format}}}:{})};
   } else {
     headers['x-api-key']=cred.key;headers['anthropic-version']='2023-06-01';
     if(cred.workspace) headers['anthropic-workspace-id']=cred.workspace;
-    body={model,max_tokens:Math.min(5000,chosen.maxTokens||5000),system,messages:[{role:'user',content}],...(chosen.structured?{output_config:{format:{type:'json_schema',schema}}}:{})};
+    body={model,max_tokens:Math.min(5000,chosen.maxTokens||5000),system,messages:[{role:'user',content}],...(chosen.structured?{output_config:{format:{type:'json_schema',schema:format}}}:{})};
   }
   if(onProgress)body.stream=true;
   const response=await fetchImpl(url,{method:'POST',headers,body:JSON.stringify(body),signal});
@@ -153,9 +154,15 @@ async function ask(input,fetchImpl=fetch,signal,onProgress) {
   }
   }
   let parsed; try{parsed=JSON.parse(output);}catch{fail('The model did not return a usable answer. No changes were made.',502);}
-  return {...validateResult(parsed,workspace),provider:input.provider,providerLabel:p.label,model,time:new Date().toISOString()};
+  return {parsed,provider:input.provider,providerLabel:p.label,model,time:new Date().toISOString()};
 }
-module.exports={status,ask,contextFor,validateResult,schema,listModels,modelMode};
+async function ask(input,fetchImpl=fetch,signal,onProgress) {
+  if(!providers[input?.provider]) fail('Choose ChatGPT or Claude.');
+  const workspace=contextFor(input);
+  const {parsed,...meta}=await complete(input,{system:instructions,content:JSON.stringify({request:input.prompt,workspace}),schema,name:'nous_workspace_result'},fetchImpl,signal,onProgress);
+  return {...validateResult(parsed,workspace),...meta};
+}
+module.exports={status,ask,complete,fail,boundedString,contextFor,validateResult,schema,listModels,modelMode};
 // Dedicated audio endpoints keep specialist models out of the structured-text adapter.
 async function audioRequest(input,fetchImpl=fetch,signal){
   if(!input||!boundedString(input.model,200))fail('Choose an audio model.');
