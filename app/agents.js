@@ -25,6 +25,8 @@
   if(db.runs.some(r=>r.status==='done'&&!r.reviewed))view='ready';
   const agentById=id=>db.agents.find(a=>a.id===id);
   const unreviewed=()=>db.runs.filter(r=>r.status==='done'&&!r.reviewed);
+  // Keeps history to 100 runs by dropping the oldest ones that need nothing; a result still waiting for review is never dropped.
+  const trimRuns=()=>{let over=db.runs.length-100;for(let i=db.runs.length-1;i>=0&&over>0;i--)if(!(db.runs[i].status==='done'&&!db.runs[i].reviewed)){db.runs.splice(i,1);over--;}};
   const hue=s=>[...String(s)].reduce((h,c)=>(h*31+c.charCodeAt(0))%360,7);
   const avatar=(a,size='')=>`<span class="ag-avatar ${size}" style="--ag-hue:${hue(a.name||'agent')}" aria-hidden="true">${esc((a.name||'?').trim()[0]?.toUpperCase()||'✦')}</span>`;
   const ago=t=>{const s=(Date.now()-new Date(t))/1000;return s<60?'just now':s<3600?`${Math.floor(s/60)} min ago`:s<86400?`${Math.floor(s/3600)} h ago`:new Date(t).toLocaleDateString();};
@@ -118,7 +120,7 @@
     const s=w.step,bar=STEPS.map((l,i)=>`<i class="${i<s?'done':i===s?'now':''}" title="${l}"></i>`).join('');
     let body='';
     if(loading)body=`<div class="ag-loading" role="status" tabindex="-1"><nous-orb state="working" size="40"></nous-orb><p>${esc(loading)}</p></div>`;
-    else if(s===0)body=header('STEP 1 · PURPOSE',accent('What should your agent','do for you?'),'Describe the job in a sentence or two. You can change everything later.')+`<textarea class="ag-input" data-field="goal" aria-label="What should your agent do?" aria-describedby="ag-goal-err" rows="5" maxlength="2000" placeholder="e.g. Every Friday, turn my notes into a one-page brief for my team">${esc(w.goal||'')}</textarea><p class="ag-err" id="ag-goal-err" hidden>Describe what the agent should do first.</p><div class="ag-chips">${TEMPLATES.slice(0,4).map((t,i)=>`<button type="button" data-template="${i}">${esc(t.name)}</button>`).join('')}</div><div class="ag-wiz-foot"><span></span><button type="button" class="ag-primary" data-act="questions">Continue →</button></div>`;
+    else if(s===0)body=header('STEP 1 · PURPOSE',accent('What should your agent','do for you?'),'Describe the job in a sentence or two. You can change everything later.')+`<textarea class="ag-input" data-field="goal" aria-label="What should your agent do?" aria-describedby="ag-goal-err" rows="5" maxlength="2000" placeholder="e.g. Turn my rough notes into a one-page brief for my team">${esc(w.goal||'')}</textarea><p class="ag-err" id="ag-goal-err" hidden>Describe what the agent should do first.</p><div class="ag-chips">${TEMPLATES.slice(0,4).map((t,i)=>`<button type="button" data-template="${i}">${esc(t.name)}</button>`).join('')}</div><div class="ag-wiz-foot"><span></span><button type="button" class="ag-primary" data-act="questions">Continue →</button></div>`;
     else if(s===1){const q=w.questions[w.qi],chosen=w.answers.find(a=>a.question===q.question)?.answer;
       body=header(`${esc(q.topic)} · ${w.qi+1} OF ${w.questions.length}`,esc(q.question))+`<div class="ag-options">${q.options.map((o,i)=>`<button type="button" data-answer="${esc(o)}" aria-pressed="${chosen===o}"><kbd>${'ABC'[i]}</kbd>${esc(o)}</button>`).join('')}
         <form class="ag-own" data-own><kbd>✎</kbd><input name="own" aria-label="Your own answer" maxlength="1000" placeholder="None of these — I'll say it my way" value="${chosen&&!q.options.includes(chosen)?esc(chosen):''}"><button type="submit">Use</button></form></div>
@@ -195,7 +197,7 @@
       if(a.saveToWorkspace)keep(record);
       toast(`${a.name} finished. The result is in Ready for you.`);
     }catch(e){Object.assign(record,{status:ctrl.signal.aborted?'cancelled':'error',error:ctrl.signal.aborted?'Cancelled or timed out. Nothing was saved to your workspace.':e.message,answer:running.answer});toast(`${a.name} ${ctrl.signal.aborted?'stopped':'did not finish'}. Details are in its previous runs.`);}
-    finally{clearTimeout(timeout);clearInterval(ticker);running=null;if(document.activeElement?.dataset?.act==='cancel')root.querySelector('#ag-run')?.focus();db.runs.unshift(record);db.runs=db.runs.slice(0,100);persist();if(view==='agent'&&openId===a.id||view!=='wizard')draw();}
+    finally{clearTimeout(timeout);clearInterval(ticker);running=null;if(document.activeElement?.dataset?.act==='cancel')root.querySelector('#ag-run')?.focus();db.runs.unshift(record);trimRuns();persist();if(view==='agent'&&openId===a.id||view!=='wizard')draw();}
   }
   // The studio covers the workspace; inert keeps Tab, screen readers and scroll-into-view out of what sits behind it.
   function setMode(mode){document.body.classList.toggle('mode-agents',mode==='agents');for(const el of document.body.children)if(el!==root&&!el.matches('dialog,script,#toast'))el.inert=mode==='agents';try{localStorage.setItem(MODE,mode);}catch{}if(mode==='agents')draw();else{render();$('#agents-toggle')?.focus();}}
