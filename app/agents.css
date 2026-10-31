@@ -38,6 +38,7 @@ body.mode-agents .agents-app{display:grid}
 /* Main column */
 /* Reset the workspace's global main{} layout (flex row, fixed height, margins). */
 .agents-app .ag-main{display:block;margin:0;height:auto;min-height:0;min-width:0;overflow:auto;padding:40px clamp(18px,4vw,56px) 80px;outline:none}
+.ag-main :is(h1,h2,.ag-eyebrow,.ag-lede,.ag-agent p){overflow-wrap:anywhere}
 .ag-main>*{max-width:1080px;margin-inline:auto}
 .ag-head{margin-bottom:28px}
 .ag-eyebrow{font:600 11px/1.4 var(--ag-mono);letter-spacing:.14em;text-transform:uppercase;color:var(--ag-muted)}
@@ -108,7 +109,7 @@ body.mode-agents .agents-app{display:grid}
 .ag-prompt textarea,.ag-input,.ag-own input,.ag-fields select{width:100%;box-sizing:border-box;border:1px solid var(--ag-line);border-radius:12px;background:color-mix(in srgb,var(--ag-card) 70%,transparent);color:var(--ag-ink);font:inherit;font-size:15px;padding:12px 14px;resize:vertical}
 .ag-prompt textarea{border:0;background:none;padding:4px}
 .ag-prompt textarea:focus{outline:none}
-.ag-prompt:focus-within{border-color:var(--ag-accent)}
+.ag-prompt:focus-within{border-color:var(--ag-accent);outline:2px solid var(--ag-accent);outline-offset:2px}
 .ag-prompt-bar{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .ag-prompt-bar button{padding:9px 18px;border-radius:99px}
 
@@ -132,7 +133,7 @@ body.mode-agents .agents-app{display:grid}
 .ag-options kbd{display:grid;place-items:center;width:28px;height:28px;flex-shrink:0;border-radius:8px;background:var(--ag-soft);color:var(--ag-accent-text);font:600 12px/1 var(--ag-mono)}
 .ag-own input{border:0;background:none;padding:4px 0}
 .ag-own input:focus{outline:none}
-.ag-own:focus-within{border-color:var(--ag-accent)}
+.ag-own:focus-within{border-color:var(--ag-accent);outline:2px solid var(--ag-accent);outline-offset:2px}
 .ag-fields{display:grid;gap:14px}
 .ag-fields label{display:grid;gap:6px;font:600 11px/1.4 var(--ag-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--ag-muted)}
 .ag-fields label>*{font-family:var(--sans,system-ui);letter-spacing:0;text-transform:none;font-weight:400}
