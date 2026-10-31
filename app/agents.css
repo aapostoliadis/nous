@@ -5,14 +5,14 @@ body.mode-agents .agents-app{display:grid}
 .agents-app{
   --ag-bg:linear-gradient(140deg,#efeaff 0%,#f6f2ff 38%,#e9e4fb 70%,#f3effc 100%);
   --ag-card:rgba(255,255,255,.72);--ag-card-line:rgba(255,255,255,.9);--ag-ink:#1d1830;--ag-muted:#6b6485;--ag-line:rgba(91,72,160,.16);
-  --ag-accent:#6c4fe0;--ag-accent-2:#9a6cf0;--ag-accent-ink:#fff;--ag-soft:rgba(108,79,224,.1);--ag-shadow:0 10px 30px rgba(73,52,150,.1);
+  --ag-accent:#6c4fe0;--ag-accent-2:#9a6cf0;--ag-accent-ink:#fff;--ag-accent-text:#6c4fe0;--ag-cta:linear-gradient(135deg,#6c4fe0,#7c55e6);--ag-soft:rgba(108,79,224,.1);--ag-shadow:0 10px 30px rgba(73,52,150,.1);
   --ag-blur:blur(16px);--ag-radius:20px;--ag-serif:var(--serif,Georgia,serif);--ag-mono:Consolas,'SF Mono',monospace;
   position:fixed;inset:0;z-index:40;grid-template-columns:248px 1fr;background:var(--ag-bg);color:var(--ag-ink);font-family:var(--sans,system-ui,sans-serif)
 }
 [data-mode="dark"] .agents-app{
   --ag-bg:radial-gradient(1200px 700px at 80% -10%,#2b2150 0%,transparent 60%),linear-gradient(160deg,#14121f,#191629 60%,#120f1c);
   --ag-card:rgba(38,33,62,.66);--ag-card-line:rgba(255,255,255,.07);--ag-ink:#ece9f8;--ag-muted:#a7a1c2;--ag-line:rgba(255,255,255,.1);
-  --ag-accent:#8e74ff;--ag-accent-2:#b48cff;--ag-soft:rgba(142,116,255,.16);--ag-shadow:0 12px 32px rgba(0,0,0,.35)
+  --ag-accent:#8e74ff;--ag-accent-2:#b48cff;--ag-accent-text:#b9a8ff;--ag-cta:linear-gradient(135deg,#6a45d8,#7650e0);--ag-soft:rgba(142,116,255,.16);--ag-shadow:0 12px 32px rgba(0,0,0,.35)
 }
 .agents-app button{font:inherit;color:inherit;cursor:pointer}
 .agents-app :focus-visible{outline:2px solid var(--ag-accent);outline-offset:2px}
@@ -26,11 +26,11 @@ body.mode-agents .agents-app{display:grid}
 .ag-side nav button{display:flex;align-items:center;gap:10px;width:100%;padding:9px 10px;border:0;border-radius:10px;background:none;text-align:left;font-size:14px;color:var(--ag-muted)}
 .ag-side nav button:hover{background:var(--ag-soft);color:var(--ag-ink)}
 .ag-side nav button[aria-current]{background:var(--ag-card);color:var(--ag-ink);font-weight:600;box-shadow:var(--ag-shadow)}
-.ag-side nav b{margin-left:auto;min-width:20px;padding:1px 7px;border-radius:99px;background:var(--ag-soft);color:var(--ag-accent);font:600 11px/18px var(--ag-mono);text-align:center}
+.ag-side nav b{margin-left:auto;min-width:20px;padding:1px 7px;border-radius:99px;background:var(--ag-soft);color:var(--ag-accent-text);font:600 11px/18px var(--ag-mono);text-align:center}
 .ag-ico{width:18px;text-align:center;opacity:.8}
 .ag-pulse{animation:ag-pulse 1.4s ease-in-out infinite;color:var(--ag-accent)}
 @keyframes ag-pulse{50%{opacity:.3}}
-.ag-new{padding:10px 14px;border:0;border-radius:99px;background:linear-gradient(135deg,var(--ag-accent),var(--ag-accent-2));color:var(--ag-accent-ink)!important;font-weight:600;box-shadow:var(--ag-shadow)}
+.ag-new{padding:10px 14px;border:0;border-radius:99px;background:var(--ag-cta);color:var(--ag-accent-ink)!important;font-weight:600;box-shadow:var(--ag-shadow)}
 .ag-side-foot{margin-top:auto;display:flex;flex-direction:column;gap:8px;padding:0 8px}
 .ag-side-foot button{padding:8px 10px;border:1px solid var(--ag-line);border-radius:10px;background:none;font-size:13px;text-align:left}
 .ag-model{font:12px/1.4 var(--ag-mono);color:var(--ag-muted);overflow-wrap:anywhere}
@@ -64,11 +64,11 @@ body.mode-agents .agents-app{display:grid}
 .ag-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .ag-actions button,.ag-wiz-foot button,.ag-own button,.ag-now-top button,.ag-chips button{padding:8px 14px;border:1px solid var(--ag-line);border-radius:99px;background:var(--ag-card);font-size:13px}
 .ag-actions button:hover,.ag-wiz-foot button:hover{border-color:var(--ag-accent)}
-.agents-app .ag-primary{border:0!important;background:linear-gradient(135deg,var(--ag-accent),var(--ag-accent-2))!important;color:var(--ag-accent-ink)!important;font-weight:600}
+.agents-app .ag-primary{border:0!important;background:var(--ag-cta)!important;color:var(--ag-accent-ink)!important;font-weight:600}
 .agents-app .ag-primary:disabled{opacity:.55;cursor:default}
 .agents-app .ag-danger{color:#b3261e;border-color:color-mix(in srgb,#b3261e 35%,transparent)}
 [data-mode="dark"] .agents-app .ag-danger{color:#f09a92}
-.ag-tag{padding:3px 9px;border-radius:99px;background:var(--ag-soft);color:var(--ag-accent);font:600 11px/1.4 var(--ag-mono);letter-spacing:.04em}
+.ag-tag{padding:3px 9px;border-radius:99px;background:var(--ag-soft);color:var(--ag-accent-text);font:600 11px/1.4 var(--ag-mono);letter-spacing:.04em}
 .ag-note{color:var(--ag-muted);font-size:12.5px}
 .ag-empty{padding:40px;text-align:center;color:var(--ag-muted)}
 
@@ -125,7 +125,7 @@ body.mode-agents .agents-app{display:grid}
 .ag-options>button,.ag-own{display:flex;align-items:center;gap:14px;padding:14px 16px;border:1px solid var(--ag-card-line);border-radius:14px;background:var(--ag-card);box-shadow:var(--ag-shadow);text-align:left;font-size:15px;backdrop-filter:var(--ag-blur)}
 .ag-options>button:hover{border-color:var(--ag-accent)}
 .ag-options>button[aria-pressed="true"]{border-color:var(--ag-accent);background:var(--ag-soft)}
-.ag-options kbd{display:grid;place-items:center;width:28px;height:28px;flex-shrink:0;border-radius:8px;background:var(--ag-soft);color:var(--ag-accent);font:600 12px/1 var(--ag-mono)}
+.ag-options kbd{display:grid;place-items:center;width:28px;height:28px;flex-shrink:0;border-radius:8px;background:var(--ag-soft);color:var(--ag-accent-text);font:600 12px/1 var(--ag-mono)}
 .ag-own input{border:0;background:none;padding:4px 0}
 .ag-own input:focus{outline:none}
 .ag-own:focus-within{border-color:var(--ag-accent)}
@@ -167,5 +167,10 @@ body.mode-agents .agents-app{display:grid}
   .ag-wiz-body{grid-template-columns:1fr}
   .ag-preview{position:static;order:-1}
   .ag-agent-head{flex-wrap:wrap}
+}
+/* Touch: 44px targets, and 16px fields so iOS does not zoom on focus. */
+@media (pointer:coarse){
+  .agents-app button,.ag-own input{min-height:44px}
+  .ag-prompt textarea,.ag-input,.ag-own input,.ag-fields select{font-size:16px}
 }
 @media (prefers-reduced-motion:reduce){.ag-pulse,.ag-dot,.ag-bar i{animation:none}}
