@@ -209,14 +209,14 @@
     if(d.review){const r=db.runs.find(r=>r.id===d.review);if(r){r.reviewed=true;persist();draw();refocus(r.id);toast('Marked reviewed.');}return;}
     if(d.copy){const r=db.runs.find(r=>r.id===d.copy);navigator.clipboard?.writeText(`# ${r.title}\n\n${r.answer}`).then(()=>toast('Copied to the clipboard.'),()=>toast('The browser blocked clipboard access.'));return;}
     if(d.keep){const r=db.runs.find(r=>r.id===d.keep);if(r){keep(r);persist();draw();refocus(r.id);toast('Added to your workspace as an artifact.');}return;}
-    if(d.delete){const a=agentById(d.delete),n=db.runs.filter(r=>r.agentId===a.id).length;if(!confirm(`Delete “${a.name}” and its ${n} result${n===1?'':'s'}? Results already saved to the workspace stay there.`))return;db.agents=db.agents.filter(x=>x.id!==a.id);db.runs=db.runs.filter(r=>r.agentId!==a.id);persist();return go('agents');}
+    if(d.delete){const a=agentById(d.delete),n=db.runs.filter(r=>r.agentId===a.id).length;if(!confirm(`Delete “${a.name}” and its ${n} result${n===1?'':'s'}? Results already saved to the workspace stay there.`))return;db.agents=db.agents.filter(x=>x.id!==a.id);db.runs=db.runs.filter(r=>r.agentId!==a.id);persist();go('agents');return toast('Agent deleted.');}
     if(d.answer)return answer(d.answer);
     switch(d.act){
       case 'new':return w&&!w.editingId&&(w.goal||w.name)?go('wizard'):startWizard();
       case 'workspace':return setMode('workspace');
       case 'keys':return $('#connections').click();
       case 'cancel':return running?.ctrl.abort();
-      case 'wipe':if(confirm('Delete every agent, result and draft stored in this browser? Workspace objects are not affected.')){db={agents:[],runs:[],draft:null};w=null;persist();go('agents');}return;
+      case 'wipe':if(confirm('Delete every agent, result and draft stored in this browser? Workspace objects are not affected.')){db={agents:[],runs:[],draft:null};w=null;persist();go('agents');toast('All agents and results deleted.');}return;
       case 'exit':saveDraft();toast(w.editingId?'Changes kept as a draft.':'Draft saved. Pick it up from New agent.');return go(w.editingId?'agent':'agents',w.editingId||openId);
       case 'prev':if(w.step===1&&w.qi>0)w.qi--;else if(w.step===2&&w.questions.length&&!w.editingId){w.step=1;w.qi=w.questions.length-1;}else w.step=Math.max(0,w.step===2&&!w.questions.length?0:w.step-1);saveDraft();draw();return focusHead();
       case 'skip':w.redraft=true;return toIdentity();
