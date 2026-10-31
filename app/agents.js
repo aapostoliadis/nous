@@ -183,7 +183,7 @@
   async function run(a,request){
     if(running)return toast('One run at a time. Wait for the current run or cancel it.');
     const {provider,model,ok}=pick();
-    if(!ok){toast('Add your ChatGPT or Claude key and choose a model to run agents.');return go('settings');}
+    if(!ok){toast(provider&&provider!=='local'&&window.providerReady?.(provider)?'Your key is saved, but no model is available. Choose one in Settings to run agents.':'Add your ChatGPT or Claude key and choose a model to run agents.');return go('settings');}
     const ctrl=new AbortController();running={agentId:a.id,request,started:Date.now(),answer:'',ctrl};go('agent',a.id);
     const timeout=setTimeout(()=>ctrl.abort(),95000);
     ticker=setInterval(()=>{const t=root.querySelector('#ag-timer');if(t)t.textContent=clock(Date.now()-running.started);},1000);
