@@ -86,6 +86,7 @@ body.mode-agents .agents-app{display:grid}
 .ag-query{margin:8px 0 0;padding:10px 12px;border-radius:10px;background:var(--ag-soft);font-size:13px;white-space:pre-wrap;overflow-wrap:anywhere}
 .ag-md{font-size:14.5px;line-height:1.6;overflow-wrap:anywhere}
 .ag-md h3,.ag-md h4,.ag-md h5,.ag-md h6{margin:16px 0 6px;font-family:var(--ag-serif);font-weight:500}
+.ag-md h3{font-size:15.5px!important}
 .ag-md pre{padding:12px;border-radius:10px;background:var(--ag-soft);overflow:auto}
 .ag-md code{font-family:var(--ag-mono);font-size:.92em}
 .ag-row{margin:2px 0;font-size:13.5px}
