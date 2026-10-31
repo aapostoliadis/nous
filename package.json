@@ -8,6 +8,6 @@
   },
   "scripts": {
     "start": "node app/server.cjs",
-    "test": "node tests/verify-models.cjs && node tests/verify-streaming.cjs && node tests/verify-provider-client.cjs && node tests/verify-dictation.cjs && node tests/verify-hosting.cjs"
+    "test": "node tests/verify-models.cjs && node tests/verify-streaming.cjs && node tests/verify-provider-client.cjs && node tests/verify-dictation.cjs && node tests/verify-agents.cjs && node tests/verify-hosting.cjs"
   }
 }

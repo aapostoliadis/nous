@@ -2,13 +2,15 @@ const http = require('node:http');
 const fs = require('node:fs');
 const path = require('node:path');
 const {status,ask,listModels,audioRequest} = require('./providers.cjs');
+const agents = require('./agents.cjs');
+const handlers = {'/api/ask':ask,'/api/audio':audioRequest,'/api/agents/design':agents.design,'/api/agents/run':agents.run};
 const root = __dirname;
 const port = Number(process.env.PORT || 4179);
 const hosted=process.env.VERCEL==='1';
 const hosts=new Set(hosted
   ? [process.env.VERCEL_URL,process.env.VERCEL_PROJECT_PRODUCTION_URL,process.env.VERCEL_BRANCH_URL,...(process.env.NOUS_ALLOWED_HOSTS||'').split(',')].filter(Boolean).map(host=>host.trim().toLowerCase())
   : [`localhost:${port}`,`127.0.0.1:${port}`]);
-const publicFiles=new Set(['index.html','app.js','ask.js','connections.js','map-fullscreen.js','style.css','kit-theme.css','dropdowns.css','map-fullscreen.css','ask.css','connections.css','thinking-orbs.js','audio-tools.js','dictation.js','ux-refinements.css','dark-theme.css','theme.js','vendor/thinking-orbs/engine.es.js']);
+const publicFiles=new Set(['index.html','app.js','ask.js','connections.js','map-fullscreen.js','style.css','kit-theme.css','dropdowns.css','map-fullscreen.css','ask.css','connections.css','thinking-orbs.js','audio-tools.js','dictation.js','ux-refinements.css','dark-theme.css','theme.js','agents.js','agents.css','vendor/thinking-orbs/engine.es.js']);
 function json(res,code,data){res.writeHead(code,{'Content-Type':'application/json','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'});res.end(JSON.stringify(data));}
 async function handler(req,res){
   const host=String(req.headers.host||'').toLowerCase();
@@ -24,7 +26,7 @@ async function handler(req,res){
     try{return json(res,200,await listModels(params.get('provider'),{force:params.get('refresh')==='1',key:req.headers['x-provider-key']}));}
     catch(e){return json(res,e.status||502,{error:e.status?e.message:'Could not reach the model catalogue. Try refreshing.'});}
   }
-  if(['/api/ask','/api/audio'].includes(url)&&req.method==='POST') {
+  if(handlers[url]&&req.method==='POST') {
     if(url==='/api/audio'&&!req.headers.origin)return json(res,403,{error:'Open Audio tools in Nous.'});
     if(!String(req.headers['content-type']).startsWith('application/json')) return json(res,415,{error:'JSON required.'});
     const controller=new AbortController();
@@ -36,14 +38,14 @@ async function handler(req,res){
       let input;try{input=JSON.parse(body);}catch{}
       if(!input||typeof input!=='object'||Array.isArray(input)){const e=new Error('Invalid JSON request.');e.status=400;throw e;}
       input.key=req.headers['x-provider-key']; // The user's own key arrives as a header only, never in the body or URL.
-      if(url==='/api/ask'&&input.stream===true){
+      if(['/api/ask','/api/agents/run'].includes(url)&&input.stream===true){
         res.writeHead(200,{'Content-Type':'application/x-ndjson; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'});
         res.flushHeaders();
         const emit=data=>{if(!res.destroyed)res.write(JSON.stringify(data)+'\n');};
         emit({type:'start'});
-        const result=await ask(input,fetch,controller.signal,answer=>emit({type:'answer',answer}));
+        const result=await handlers[url](input,fetch,controller.signal,answer=>emit({type:'answer',answer}));
         emit({type:'complete',result});res.end();
-      }else json(res,200,await (url==='/api/audio'?audioRequest:ask)(input,fetch,controller.signal));
+      }else json(res,200,await handlers[url](input,fetch,controller.signal));
     } catch(e) { if(!res.destroyed){const error=e.status?e.message:controller.signal.aborted?'Request timed out or was cancelled. No changes were made.':'Could not reach the provider. No changes were made.';if(res.headersSent)res.end(JSON.stringify({type:'error',error})+'\n');else json(res,e.status||502,{error});} }
     finally{clearTimeout(timeout);}
     return;
