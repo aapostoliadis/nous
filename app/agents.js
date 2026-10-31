@@ -74,7 +74,7 @@
     return `<article class="ag-card ag-result"><div class="ag-result-top">${agent?avatar(a,'sm'):''}<div><div class="ag-eyebrow">${agent?esc(a.name)+' · ':''}${esc(ago(r.time))}</div><h2${level?` aria-level="${level}"`:''}>${esc(r.title)}</h2></div></div>
       ${r.highlights?.length?`<ul class="ag-highlights">${r.highlights.map(h=>`<li>${esc(h)}</li>`).join('')}</ul>`:''}
       <details><summary>Read the full result</summary><div class="ag-md">${md(r.answer)}</div>${r.nextSteps?.length?`<div class="ag-eyebrow">NEXT STEPS</div><ul class="ag-highlights">${r.nextSteps.map(h=>`<li>${esc(h)}</li>`).join('')}</ul>`:''}<p class="ag-note">${esc(r.model||'')} · Model output, not verified. Check facts before relying on it.</p></details>
-      <div class="ag-actions">${r.reviewed?'<span class="ag-tag">Reviewed</span>':`<button type="button" class="ag-primary" data-review="${r.id}" aria-label="Mark ${esc(r.title)} reviewed">Mark reviewed</button>`}${agent&&agentById(r.agentId)?`<button type="button" data-open="${r.agentId}" aria-label="Open agent ${esc(a.name)}">Open agent</button>`:''}<button type="button" data-copy="${r.id}" aria-label="Copy ${esc(r.title)}">Copy</button>${r.savedTo?'<span class="ag-tag">In workspace</span>':`<button type="button" data-keep="${r.id}" aria-label="Save ${esc(r.title)} to workspace">Save to workspace</button>`}</div></article>`;
+      <div class="ag-actions">${r.reviewed?'<span class="ag-tag">Reviewed</span>':`<button type="button"${agent?' class="ag-primary"':''} data-review="${r.id}" aria-label="Mark ${esc(r.title)} reviewed">Mark reviewed</button>`}${agent&&agentById(r.agentId)?`<button type="button" data-open="${r.agentId}" aria-label="Open agent ${esc(a.name)}">Open agent</button>`:''}<button type="button" data-copy="${r.id}" aria-label="Copy ${esc(r.title)}">Copy</button>${r.savedTo?'<span class="ag-tag">In workspace</span>':`<button type="button" data-keep="${r.id}" aria-label="Save ${esc(r.title)} to workspace">Save to workspace</button>`}</div></article>`;
   }
   function vReady(){
     const list=unreviewed();
@@ -117,7 +117,7 @@
   function vWizard(){
     const s=w.step,bar=STEPS.map((l,i)=>`<i class="${i<s?'done':i===s?'now':''}" title="${l}"></i>`).join('');
     let body='';
-    if(loading)body=`<div class="ag-loading" role="status"><nous-orb state="working" size="40"></nous-orb><p>${esc(loading)}</p></div>`;
+    if(loading)body=`<div class="ag-loading" role="status" tabindex="-1"><nous-orb state="working" size="40"></nous-orb><p>${esc(loading)}</p></div>`;
     else if(s===0)body=header('STEP 1 · PURPOSE',accent('What should your agent','do for you?'),'Describe the job in a sentence or two. You can change everything later.')+`<textarea class="ag-input" data-field="goal" aria-label="What should your agent do?" aria-describedby="ag-goal-err" rows="5" maxlength="2000" placeholder="e.g. Every Friday, turn my notes into a one-page brief for my team">${esc(w.goal||'')}</textarea><p class="ag-err" id="ag-goal-err" hidden>Describe what the agent should do first.</p><div class="ag-chips">${TEMPLATES.slice(0,4).map((t,i)=>`<button type="button" data-template="${i}">${esc(t.name)}</button>`).join('')}</div><div class="ag-wiz-foot"><span></span><button type="button" class="ag-primary" data-act="questions">Continue →</button></div>`;
     else if(s===1){const q=w.questions[w.qi],chosen=w.answers.find(a=>a.question===q.question)?.answer;
       body=header(`${esc(q.topic)} · ${w.qi+1} OF ${w.questions.length}`,esc(q.question))+`<div class="ag-options">${q.options.map((o,i)=>`<button type="button" data-answer="${esc(o)}" aria-pressed="${chosen===o}"><kbd>${'ABC'[i]}</kbd>${esc(o)}</button>`).join('')}
@@ -142,6 +142,8 @@
   }
   // A new view or wizard step moves focus to its heading, so screen readers announce where you are without reading the whole page.
   const focusHead=()=>(root.querySelector('.ag-main h1')||root.querySelector('.ag-main'))?.focus({preventScroll:true});
+  // Mark reviewed and Save swap their button for a badge: keep focus on the same card, or on the next result once the card leaves the list.
+  const refocus=id=>{const b=root.querySelector(`[data-copy="${CSS.escape(id)}"]`)||root.querySelector('[data-review]');b?b.focus():focusHead();};
   function go(v,id){const moved=v!==view;view=v;openId=id??openId;draw();root.querySelector('.ag-main')?.scrollTo(0,0);if(moved&&document.body.classList.contains('mode-agents'))focusHead();}
   const saveDraft=()=>{db.draft=w;persist();};
   function startWizard(seedData={},step=0){w={step,goal:'',questions:[],qi:0,answers:[],name:'',description:'',instructions:'',starter:'',useWorkspace:false,saveToWorkspace:false,...seedData};saveDraft();go('wizard');}
@@ -149,7 +151,7 @@
   async function design(stage){
     const {provider,model,ok}=pick(),answers=w.answers;
     if(ok){
-      loading=stage==='questions'?'Working out what to ask you…':'Drafting your agent…';draw();
+      loading=stage==='questions'?'Working out what to ask you…':'Drafting your agent…';draw();root.querySelector('.ag-loading')?.focus({preventScroll:true});
       try{const r=await post('/api/agents/design',provider,{provider,model,stage,goal:w.goal,answers});const data=await r.json().catch(()=>({}));if(!r.ok)throw Error(data.error||'The provider could not draft this.');return data;}
       catch(e){toast(`${e.message} Using a local draft instead.`);}
       finally{loading='';}
@@ -193,7 +195,7 @@
       if(a.saveToWorkspace)keep(record);
       toast(`${a.name} finished. The result is in Ready for you.`);
     }catch(e){Object.assign(record,{status:ctrl.signal.aborted?'cancelled':'error',error:ctrl.signal.aborted?'Cancelled or timed out. Nothing was saved to your workspace.':e.message,answer:running.answer});toast(`${a.name} ${ctrl.signal.aborted?'stopped':'did not finish'}. Details are in its previous runs.`);}
-    finally{clearTimeout(timeout);clearInterval(ticker);running=null;db.runs.unshift(record);db.runs=db.runs.slice(0,100);persist();if(view==='agent'&&openId===a.id||view!=='wizard')draw();}
+    finally{clearTimeout(timeout);clearInterval(ticker);running=null;if(document.activeElement?.dataset?.act==='cancel')root.querySelector('#ag-run')?.focus();db.runs.unshift(record);db.runs=db.runs.slice(0,100);persist();if(view==='agent'&&openId===a.id||view!=='wizard')draw();}
   }
   // The studio covers the workspace; inert keeps Tab, screen readers and scroll-into-view out of what sits behind it.
   function setMode(mode){document.body.classList.toggle('mode-agents',mode==='agents');for(const el of document.body.children)if(el!==root&&!el.matches('dialog,script,#toast'))el.inert=mode==='agents';try{localStorage.setItem(MODE,mode);}catch{}if(mode==='agents')draw();else{render();$('#agents-toggle')?.focus();}}
@@ -204,9 +206,9 @@
     if(d.open)return go('agent',d.open);
     if(d.edit){const a=agentById(d.edit);return startWizard({...a,editingId:a.id,answers:a.answers||[],questions:[]},2);}
     if(d.template){const tpl=TEMPLATES[+d.template];return startWizard({goal:tpl.goal,name:tpl.name,description:tpl.description,instructions:tpl.instructions,starter:tpl.starter,useWorkspace:!!tpl.useWorkspace,saveToWorkspace:!!tpl.saveToWorkspace},2);}
-    if(d.review){const r=db.runs.find(r=>r.id===d.review);if(r){r.reviewed=true;persist();draw();toast('Marked reviewed.');}return;}
+    if(d.review){const r=db.runs.find(r=>r.id===d.review);if(r){r.reviewed=true;persist();draw();refocus(r.id);toast('Marked reviewed.');}return;}
     if(d.copy){const r=db.runs.find(r=>r.id===d.copy);navigator.clipboard?.writeText(`# ${r.title}\n\n${r.answer}`).then(()=>toast('Copied to the clipboard.'),()=>toast('The browser blocked clipboard access.'));return;}
-    if(d.keep){const r=db.runs.find(r=>r.id===d.keep);if(r){keep(r);persist();draw();toast('Added to your workspace as an artifact.');}return;}
+    if(d.keep){const r=db.runs.find(r=>r.id===d.keep);if(r){keep(r);persist();draw();refocus(r.id);toast('Added to your workspace as an artifact.');}return;}
     if(d.delete){const a=agentById(d.delete),n=db.runs.filter(r=>r.agentId===a.id).length;if(!confirm(`Delete “${a.name}” and its ${n} result${n===1?'':'s'}? Results already saved to the workspace stay there.`))return;db.agents=db.agents.filter(x=>x.id!==a.id);db.runs=db.runs.filter(r=>r.agentId!==a.id);persist();return go('agents');}
     if(d.answer)return answer(d.answer);
     switch(d.act){
