@@ -4,7 +4,7 @@
 @font-face{font-family:'Plus Jakarta Sans';src:url('assets/fonts/plus-jakarta-sans-latin-wght-normal.woff2') format('woff2');font-weight:200 800;font-style:normal;font-display:swap}
 :root{--paper:#f3f4f6;--ink:#151823;--muted:#64666e;--line:#e3e5e9;--green:#295b44;--green-light:#e9f1ed;--sans:Inter,Arial,sans-serif;--serif:Inter,Arial,sans-serif;--panel-radius:32px;--card-radius:20px;--card-shadow:0 2px 4px #15182303,0 10px 25px #15182305}
 body{background:var(--bg,#f3f4f6);isolation:isolate}
-body:before{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;background:url('assets/workspace-texture.png') center 35%/cover;opacity:.08}
+body:before{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;background:url('assets/workspace-texture.webp') center 35%/cover;opacity:.08}
 button{transition:background .18s,box-shadow .18s,color .18s}
 button:focus-visible,a:focus-visible{outline-offset:3px}
 .topbar{height:94px;padding:0 32px;border:0;gap:24px}
@@ -30,7 +30,7 @@ h1{font-size:30px;font-weight:500;letter-spacing:-1.1px;line-height:1.22;margin:
 .view-right{gap:18px;font-size:12px}.view-right button{border:1px solid #fff;background:#ffffffb3;border-radius:99px;padding:12px 18px;font-size:12px;color:#151823}
 main{gap:24px;margin:0 32px;height:calc(100vh - 458px);min-height:552px}
 #surface{background:#ffffff70;border:1px solid #fff;border-radius:var(--panel-radius);box-shadow:0 4px 24px #15182302}
-#inspector{width:330px;border:1px solid #fff;border-radius:var(--panel-radius);padding:26px 24px;background:linear-gradient(#ffffffbd,#ffffffbd),url('assets/workspace-texture.png') center bottom/cover;box-shadow:0 4px 24px #15182303;scrollbar-width:thin;scrollbar-color:#c4c8d3 transparent}
+#inspector{width:330px;border:1px solid #fff;border-radius:var(--panel-radius);padding:26px 24px;background:linear-gradient(#ffffffbd,#ffffffbd),url('assets/workspace-texture.webp') center bottom/cover;box-shadow:0 4px 24px #15182303;scrollbar-width:thin;scrollbar-color:#c4c8d3 transparent}
 .inspector-eyebrow{font-size:12px;letter-spacing:1.4px;color:#6b7280;margin-bottom:22px}.inspector-eyebrow button{width:26px;height:26px;border-radius:50%;background:#ffffff90}
 .context-title{font-size:23px;font-weight:500;letter-spacing:-.8px}.context-lead{font-size:12px;line-height:1.75}
 .context-group{border-color:#dde0e580;padding-top:18px;margin-top:20px}.context-group h3{font-size:12px;letter-spacing:1px;color:#4b504e}.context-group li{color:#64666e;line-height:1.75}.context-footer{font-size:12px;color:#64666e}
