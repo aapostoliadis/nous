@@ -21,7 +21,7 @@
     {topic:'FORMAT',question:'What shape should each result take?',options:['A short brief with bullet points','A structured report with sections','A ready-to-send draft']},
     {topic:'DEPTH',question:'How much detail should it go into?',options:['The headline and three key points','A balanced overview','Thorough, with reasoning and caveats']}
   ];
-  let view='agents',openId=null,running=null,ticker=null,loading='',w=db.draft;
+  let view='agents',openId=null,running=null,ticker=null,loading='',w=db.draft,drafts={};
   if(db.runs.some(r=>r.status==='done'&&!r.reviewed))view='ready';
   const agentById=id=>db.agents.find(a=>a.id===id);
   const unreviewed=()=>db.runs.filter(r=>r.status==='done'&&!r.reviewed);
@@ -71,7 +71,7 @@
   const header=(eyebrow,h1,lede='')=>`<header class="ag-head"><div class="ag-eyebrow">${eyebrow}</div><h1>${h1}</h1>${lede?`<p class="ag-lede">${lede}</p>`:''}</header>`;
   function runCard(r,{agent=true}={}){
     const a=agentById(r.agentId)||{name:r.agentName||'Deleted agent'};
-    return `<article class="ag-card ag-result"><div class="ag-result-top">${agent?avatar(a,'sm'):''}<div><div class="ag-eyebrow">${agent?esc(a.name)+' · ':''}${esc(ago(r.time))}</div><h3>${esc(r.title)}</h3></div></div>
+    return `<article class="ag-card ag-result"><div class="ag-result-top">${agent?avatar(a,'sm'):''}<div><div class="ag-eyebrow">${agent?esc(a.name)+' · ':''}${esc(ago(r.time))}</div><h2>${esc(r.title)}</h2></div></div>
       ${r.highlights?.length?`<ul class="ag-highlights">${r.highlights.map(h=>`<li>${esc(h)}</li>`).join('')}</ul>`:''}
       <details><summary>Read the full result</summary><div class="ag-md">${md(r.answer)}</div>${r.nextSteps?.length?`<div class="ag-eyebrow">NEXT STEPS</div><ul class="ag-highlights">${r.nextSteps.map(h=>`<li>${esc(h)}</li>`).join('')}</ul>`:''}<p class="ag-note">${esc(r.model||'')} · Model output, not verified. Check facts before relying on it.</p></details>
       <div class="ag-actions">${r.reviewed?'<span class="ag-tag">Reviewed</span>':`<button type="button" class="ag-primary" data-review="${r.id}">Mark reviewed</button>`}${agent&&agentById(r.agentId)?`<button type="button" data-open="${r.agentId}">Open agent</button>`:''}<button type="button" data-copy="${r.id}">Copy</button>${r.savedTo?'<span class="ag-tag">In workspace</span>':`<button type="button" data-keep="${r.id}">Save to workspace</button>`}</div></article>`;
@@ -83,21 +83,21 @@
   }
   function vAgents(){
     return header('MY AGENTS',accent('Your','agents.'),'Each agent is a set of instructions that runs on your own ChatGPT or Claude key.')+
-      `<div class="ag-grid">${db.agents.map(a=>{const last=db.runs.find(r=>r.agentId===a.id);return `<article class="ag-card ag-agent"><button type="button" class="ag-cover" data-open="${a.id}" aria-label="Open ${esc(a.name)}"></button>${avatar(a)}<h3>${esc(a.name)}</h3><p>${esc(a.description)}</p><div class="ag-meta">${a.useWorkspace?'<span class="ag-tag">Workspace</span>':''}<span>${last?'Last run '+esc(ago(last.time)):'Not run yet'}</span></div><div class="ag-actions"><button type="button" class="ag-primary" data-open="${a.id}">Run ↗</button><button type="button" data-edit="${a.id}">Edit</button></div></article>`;}).join('')}
+      `<div class="ag-grid">${db.agents.map(a=>{const last=db.runs.find(r=>r.agentId===a.id);return `<article class="ag-card ag-agent"><button type="button" class="ag-cover" data-open="${a.id}" aria-label="Open ${esc(a.name)}"></button>${avatar(a)}<h2>${esc(a.name)}</h2><p>${esc(a.description)}</p><div class="ag-meta">${a.useWorkspace?'<span class="ag-tag">Workspace</span>':''}<span>${last?'Last run '+esc(ago(last.time)):'Not run yet'}</span></div><div class="ag-actions"><button type="button" class="ag-primary" data-open="${a.id}">Run ↗</button><button type="button" data-edit="${a.id}">Edit</button></div></article>`;}).join('')}
       <button type="button" class="ag-card ag-add" data-act="new"><span>＋</span>Add an agent<small>Describe it, answer a few questions, done.</small></button></div>`;
   }
   function vTemplates(){
     return header('TEMPLATES',accent('Start from a','template.'),'Starter agents written for what Nous can actually do today. Each opens in the wizard so you can change anything.')+
-      `<div class="ag-grid">${TEMPLATES.map((t,i)=>`<article class="ag-card ag-agent">${avatar(t)}<h3>${esc(t.name)}</h3><p>${esc(t.description)}</p><div class="ag-meta">${t.useWorkspace?'<span class="ag-tag">Uses workspace</span>':''}</div><div class="ag-actions"><button type="button" class="ag-primary" data-template="${i}">Use template</button></div></article>`).join('')}</div>`;
+      `<div class="ag-grid">${TEMPLATES.map((t,i)=>`<article class="ag-card ag-agent">${avatar(t)}<h2>${esc(t.name)}</h2><p>${esc(t.description)}</p><div class="ag-meta">${t.useWorkspace?'<span class="ag-tag">Uses workspace</span>':''}</div><div class="ag-actions"><button type="button" class="ag-primary" data-template="${i}">Use template</button></div></article>`).join('')}</div>`;
   }
   function vSettings(){
     const sel=$('#ai-provider'),mod=$('#ai-model');
     return header('SETTINGS',accent('How your agents','run.'))+
-      `<section class="ag-card ag-settings"><h3>Model</h3><p>Agents use the provider and model below, with your own API key. The same choice applies to Ask in the workspace.</p>
+      `<section class="ag-card ag-settings"><h2>Model</h2><p>Agents use the provider and model below, with your own API key. The same choice applies to Ask in the workspace.</p>
         <div class="ag-fields"><label>Provider<select data-mirror="ai-provider">${[...sel.options].filter(o=>o.value!=='local').map(o=>`<option value="${esc(o.value)}"${o.value===sel.value?' selected':''}>${esc(o.textContent)}</option>`).join('')}</select></label>
         <label>Model<select data-mirror="ai-model"${mod.disabled?' disabled':''}>${mod.innerHTML}</select></label></div>
         <div class="ag-actions"><button type="button" class="ag-primary" data-act="keys">Manage API keys</button><span class="ag-model">${esc(pick().ok?'Ready to run':'Add a key and choose a model to run agents')}</span></div></section>
-      <section class="ag-card ag-settings"><h3>What agents can do</h3><p>Agents write: briefs, plans, critiques, drafts and summaries, from your request and, if you allow it, your workspace. They cannot browse the web, search, send email or act in other apps, and they say so rather than pretend.</p>
+      <section class="ag-card ag-settings"><h2>What agents can do</h2><p>Agents write: briefs, plans, critiques, drafts and summaries, from your request and, if you allow it, your workspace. They cannot browse the web, search, send email or act in other apps, and they say so rather than pretend.</p>
         <p>Agents and results are stored only in this browser. Each run sends the agent's instructions, your request and any workspace context to the provider you chose.</p>
         <div class="ag-actions"><button type="button" class="ag-danger" data-act="wipe">Delete all agents and results</button></div></section>`;
   }
@@ -106,12 +106,12 @@
     const runs=db.runs.filter(r=>r.agentId===a.id),live=running?.agentId===a.id;
     return `<header class="ag-head ag-agent-head">${avatar(a,'lg')}<div><div class="ag-eyebrow">AGENT${a.useWorkspace?' · READS WORKSPACE':''}${a.saveToWorkspace?' · SAVES TO WORKSPACE':''}</div><h1>${esc(a.name)}</h1><p class="ag-lede">${esc(a.description)}</p></div><div class="ag-actions"><button type="button" data-edit="${a.id}">Edit</button><button type="button" class="ag-danger" data-delete="${a.id}">Delete</button></div></header>
       ${live?`<section class="ag-card ag-now"><div class="ag-now-top"><div class="ag-eyebrow"><i class="ag-dot"></i> HAPPENING NOW</div><span id="ag-timer" class="ag-timer">${clock(Date.now()-running.started)}</span><button type="button" data-act="cancel">Cancel</button></div><div class="ag-bar"><i></i></div><div class="ag-eyebrow" id="ag-phase" aria-live="polite">${running.answer?'WRITING IT UP…':'THINKING IT THROUGH…'}</div><p class="ag-query">${esc(running.request||a.starter||'Usual run')}</p><div id="ag-stream" class="ag-md ag-stream">${md(running.answer||'')}</div></section>`:''}
-      <form class="ag-prompt ag-card" data-run="${a.id}"><label class="sr-only" for="ag-request">Ask for a run</label><textarea id="ag-request" name="request" rows="2" maxlength="5000" placeholder="Ask for a run…">${esc(a.starter||'')}</textarea><div class="ag-prompt-bar"><span class="ag-model">${esc(pick().label)}</span><button type="submit" class="ag-primary"${running?' disabled':''}>${running?'Running…':'Run it ↗'}</button></div></form>
+      <form class="ag-prompt ag-card" data-run="${a.id}"><label class="sr-only" for="ag-request">Ask for a run</label><textarea id="ag-request" name="request" rows="2" maxlength="5000" placeholder="Ask for a run…">${esc(drafts[a.id]??a.starter??'')}</textarea><div class="ag-prompt-bar"><span class="ag-model">${esc(pick().label)}</span><button type="submit" id="ag-run" class="ag-primary"${running?' aria-disabled="true"':''}>${running?'Running…':'Run it ↗'}</button></div></form>
       <section><div class="ag-eyebrow ag-section">PREVIOUS RUNS · ${runs.length}</div>${runs.length?`<div class="ag-stack">${runs.map(r=>r.status==='done'?runCard(r,{agent:false}):`<article class="ag-card ag-result ag-failed"><div class="ag-eyebrow">${esc(ago(r.time))} · ${r.status==='cancelled'?'CANCELLED':'DID NOT FINISH'}</div><p>${esc(r.error)}</p>${r.answer?`<details><summary>Partial output</summary><div class="ag-md">${md(r.answer)}</div></details>`:''}<p class="ag-query">${esc(r.request)}</p></article>`).join('')}</div>`:'<p class="ag-note">No runs yet. Ask for one above.</p>'}</section>`;
   }
   function preview(){
     const d=w||{};
-    return `<div class="ag-eyebrow">YOUR AGENT</div>${avatar({name:d.name||'?'},'lg')}<h3>${esc(d.name||'Unnamed agent')}</h3><p>${esc(d.description||d.goal||'Describe what it should do, and it takes shape here.')}</p>
+    return `<div class="ag-eyebrow">YOUR AGENT</div>${avatar({name:d.name||'?'},'lg')}<h2>${esc(d.name||'Unnamed agent')}</h2><p>${esc(d.description||d.goal||'Describe what it should do, and it takes shape here.')}</p>
       <dl><dt>Answers</dt><dd>${d.answers?.length?d.answers.map(a=>esc(a.answer)).join(' · '):'—'}</dd><dt>Works with</dt><dd>${d.useWorkspace?'Your request + workspace':'Your request'}</dd><dt>Results</dt><dd>Ready for you${d.saveToWorkspace?' + workspace artifact':''}</dd><dt>Runs</dt><dd>When you ask</dd></dl>`;
   }
   function vWizard(){
@@ -225,7 +225,7 @@
       }
     }
   });
-  root.addEventListener('input',e=>{const f=e.target.dataset.field;if(f&&w){w[f]=e.target.value;saveDraft();const p=root.querySelector('#ag-preview');if(p)p.innerHTML=preview();}});
+  root.addEventListener('input',e=>{if(e.target.id==='ag-request'&&openId)drafts[openId]=e.target.value;const f=e.target.dataset.field;if(f&&w){w[f]=e.target.value;saveDraft();const p=root.querySelector('#ag-preview');if(p)p.innerHTML=preview();}});
   root.addEventListener('change',e=>{
     const t=e.target;
     if(t.dataset.toggle&&w){w[t.dataset.toggle]=t.checked;saveDraft();root.querySelector('#ag-preview').innerHTML=preview();}
@@ -238,6 +238,8 @@
   });
   // Ctrl/Cmd+Enter runs from the request box.
   root.addEventListener('keydown',e=>{if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)&&e.target.id==='ag-request'){e.preventDefault();e.target.form.requestSubmit();}});
+  // Escape leaves the wizard the same way its Exit button does; skipped when an open dialog or another handler has claimed the key.
+  document.addEventListener('keydown',e=>{if(e.key!=='Escape'||e.defaultPrevented||view!=='wizard'||loading||document.querySelector('dialog[open]')||e.target.matches?.('select'))return;e.preventDefault();saveDraft();toast(w.editingId?'Changes kept as a draft.':'Draft saved. Pick it up from New agent.');go(w.editingId?'agent':'agents',w.editingId||openId);});
   const toggle=document.createElement('button');toggle.id='agents-toggle';toggle.type='button';toggle.className='agents-toggle';toggle.textContent='✦ Agents';toggle.onclick=()=>setMode('agents');
   $('#help')?.before(toggle);
   // The model list loads asynchronously; refresh the labels that show it once it settles.
