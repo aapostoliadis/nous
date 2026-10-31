@@ -52,12 +52,12 @@ async function handler(req,res){
   }
   if(!['GET','HEAD'].includes(req.method)) return json(res,405,{error:'Method not allowed.'});
   const relative=url==='/'?'index.html':url.slice(1);
-  const asset=/^assets\/[a-z0-9_./-]+\.(?:svg|png|woff2)$/i.test(relative)&&!relative.includes('..');
+  const asset=/^assets\/[a-z0-9_./-]+\.(?:svg|png|webp|woff2)$/i.test(relative)&&!relative.includes('..');
   if(!publicFiles.has(relative)&&!asset) return json(res,404,{error:'Not found.'});
   const file=path.resolve(root,relative);
   if(!file.startsWith(root+path.sep)) return json(res,403,{error:'Invalid path.'});
   let data;try{data=await fs.promises.readFile(file);}catch{return json(res,404,{error:'Not found.'});}
-  res.setHeader('Content-Type',({'html':'text/html; charset=utf-8','js':'text/javascript','css':'text/css','svg':'image/svg+xml','png':'image/png','woff2':'font/woff2'})[path.extname(file).slice(1)]);res.setHeader('Cache-Control','no-cache');res.setHeader('X-Content-Type-Options','nosniff');if(relative==='index.html'){res.setHeader('Content-Security-Policy',"frame-ancestors 'none'");res.setHeader('X-Frame-Options','DENY');}res.end(req.method==='HEAD'?undefined:data);
+  res.setHeader('Content-Type',({'html':'text/html; charset=utf-8','js':'text/javascript','css':'text/css','svg':'image/svg+xml','png':'image/png','webp':'image/webp','woff2':'font/woff2'})[path.extname(file).slice(1)]);res.setHeader('Cache-Control','no-cache');res.setHeader('X-Content-Type-Options','nosniff');if(relative==='index.html'){res.setHeader('Content-Security-Policy',"frame-ancestors 'none'");res.setHeader('X-Frame-Options','DENY');}res.end(req.method==='HEAD'?undefined:data);
 }
 module.exports=handler;
 if(require.main===module){
