@@ -39,7 +39,7 @@
       if(code){if(line.trim().startsWith('```')){out.push(`<pre><code>${code.join('\n')}</code></pre>`);code=null;}else code.push(line);continue;}
       if(line.trim().startsWith('```')){flush();code=[];continue;}
       const h=line.match(/^(#{1,4})\s+(.*)/),li=line.match(/^\s*[-*]\s+(.*)/),ol=line.match(/^\s*\d+[.)]\s+(.*)/);
-      if(h){flush();out.push(`<h${Math.min(h[1].length+1,6)}>${inline(h[2])}</h${Math.min(h[1].length+1,6)}>`);}
+      if(h){flush();out.push(`<h${Math.min(h[1].length+2,6)}>${inline(h[2])}</h${Math.min(h[1].length+2,6)}>`);}
       else if(li||ol){if(para.length){const p=para;para=[];out.push(`<p>${inline(p.join(' '))}</p>`);}const tag=li?'ul':'ol';if(list?.tag!==tag){flush();list={tag,items:[]};}list.items.push((li||ol)[1]);}
       else if(/^\|.*\|$/.test(line.trim())){flush();if(!/^\|[\s:|-]+\|$/.test(line.trim()))out.push(`<p class="ag-row">${inline(line.trim().slice(1,-1).split('|').map(c=>c.trim()).join(' · '))}</p>`);}
       else if(!line.trim())flush();else{if(list)flush();para.push(line.trim());}
@@ -162,7 +162,7 @@
   }
   function answer(text){
     const q=w.questions[w.qi];w.answers=w.answers.filter(a=>a.question!==q.question).concat(text?[{question:q.question,answer:text}]:[]);
-    if(w.qi<w.questions.length-1){w.qi++;saveDraft();draw();}else{w.redraft=true;saveDraft();toIdentity();}
+    if(w.qi<w.questions.length-1){w.qi++;saveDraft();draw();root.querySelector('[data-answer]')?.focus();}else{w.redraft=true;saveDraft();toIdentity();}
   }
   function workspaceContext(){
     let budget=280000;const objects=[];
