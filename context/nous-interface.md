@@ -226,3 +226,61 @@ references attached.
 **Consequence:** a reference to a missing object (`@X99`) is answered
 locally with "Object not found" before any model is asked, as it was
 before.
+
+## The agents studio has one style: glass
+
+**Id:** da047ee9-f29a-49fc-8d44-cf6e8e7250b0
+**Type:** decision
+**Status:** active
+**Evidence:** unknown
+**Source:** design review of three rendered studio variants, 2026-10-31; nous commit 9b84119
+
+The agents studio (`.agents-app` in `app/agents.css`) has a single
+visual style: lavender glass (translucent cards, `backdrop-filter`
+blur), with a dark counterpart under `[data-mode="dark"]`. There is no
+style switch: the `data-agents-style` attribute and the
+`nous-agents-style` storage key were removed.
+
+**Reason:** three variants, glass, ink and paper, were rendered side by
+side and the maintainer picked glass. Why glass beat the other two was
+not stated.
+
+**Which parts are confirmed:** that glass was chosen and that the other
+styles were dropped, not kept as options. Unknown: the reason for
+preferring glass. Inferred: dropping the switch keeps one set of studio
+styles to maintain and test in light and dark.
+
+**Rejected alternatives:** ink and paper, as the studio style (reason
+unknown, see above), and keeping all three behind a user-selectable
+style setting (inferred reason: three themes to keep working for a
+choice nobody needed to make).
+
+## The workspace goes inert behind the agents studio
+
+**Id:** a549f3a5-b07c-4e6d-955e-0d5b16865d5e
+**Type:** decision
+**Status:** active
+**Evidence:** inferred
+**Source:** end-to-end check of the studio against a stand-in provider, 2026-10-31; nous commit 9b84119
+
+The studio is a fixed overlay over the workspace, not a separate page.
+When it opens, `setMode('agents')` in `app/agents.js` sets `inert` on
+every child of `<body>` except the studio itself, `<dialog>` elements,
+scripts and `#toast`. Leaving the studio clears `inert` and returns focus
+to `#agents-toggle`.
+
+**Reason:** the end-to-end check found that keyboard focus could still
+move into workspace controls hidden behind the overlay, so a keyboard or
+screen-reader user could act on a screen they could not see. `inert`
+takes the covered workspace out of focus order and the accessibility
+tree while leaving it rendered, so it reappears unchanged on exit.
+
+**Which parts are confirmed:** the focus leak (observed) and that the fix
+closed it (re-checked locally and on the live site). Inferred: why
+dialogs and `#toast` are exempt; they show messages and prompts that can
+be raised while the studio is open and must stay reachable.
+
+**Rejected alternative:** only covering the workspace visually (the
+first version). Rejected because covering does not stop focus. Other
+options, such as unmounting the workspace while the studio is open, were
+not weighed: alternatives beyond this one are unknown.
