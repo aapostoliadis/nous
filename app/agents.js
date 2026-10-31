@@ -68,10 +68,10 @@
       <nav aria-label="Agents">${item('ready','Ready for you','◉',n,n===1?'result':'results')}${running?`<button type="button" data-open="${running.agentId}" class="ag-doing"><span class="ag-ico ag-pulse" aria-hidden="true">◌</span>Doing for you<b>1<span class="sr-only"> running</span></b></button>`:''}${item('agents','My agents','◇',db.agents.length,db.agents.length===1?'agent':'agents')}${item('templates','Templates','▦')}${item('settings','Settings','⚙')}</nav>
       <div class="ag-side-foot"><button type="button" data-act="workspace">Thinking workspace ↗</button><span class="ag-model" title="Provider and model used for runs">${esc(pick().label)}</span></div></aside>`;
   }
-  const header=(eyebrow,h1,lede='')=>`<header class="ag-head"><div class="ag-eyebrow">${eyebrow}</div><h1>${h1}</h1>${lede?`<p class="ag-lede">${lede}</p>`:''}</header>`;
-  function runCard(r,{agent=true}={}){
+  const header=(eyebrow,h1,lede='')=>`<header class="ag-head"><div class="ag-eyebrow">${eyebrow}</div><h1 tabindex="-1">${h1}</h1>${lede?`<p class="ag-lede">${lede}</p>`:''}</header>`;
+  function runCard(r,{agent=true,level}={}){
     const a=agentById(r.agentId)||{name:r.agentName||'Deleted agent'};
-    return `<article class="ag-card ag-result"><div class="ag-result-top">${agent?avatar(a,'sm'):''}<div><div class="ag-eyebrow">${agent?esc(a.name)+' · ':''}${esc(ago(r.time))}</div><h2>${esc(r.title)}</h2></div></div>
+    return `<article class="ag-card ag-result"><div class="ag-result-top">${agent?avatar(a,'sm'):''}<div><div class="ag-eyebrow">${agent?esc(a.name)+' · ':''}${esc(ago(r.time))}</div><h2${level?` aria-level="${level}"`:''}>${esc(r.title)}</h2></div></div>
       ${r.highlights?.length?`<ul class="ag-highlights">${r.highlights.map(h=>`<li>${esc(h)}</li>`).join('')}</ul>`:''}
       <details><summary>Read the full result</summary><div class="ag-md">${md(r.answer)}</div>${r.nextSteps?.length?`<div class="ag-eyebrow">NEXT STEPS</div><ul class="ag-highlights">${r.nextSteps.map(h=>`<li>${esc(h)}</li>`).join('')}</ul>`:''}<p class="ag-note">${esc(r.model||'')} · Model output, not verified. Check facts before relying on it.</p></details>
       <div class="ag-actions">${r.reviewed?'<span class="ag-tag">Reviewed</span>':`<button type="button" class="ag-primary" data-review="${r.id}" aria-label="Mark ${esc(r.title)} reviewed">Mark reviewed</button>`}${agent&&agentById(r.agentId)?`<button type="button" data-open="${r.agentId}" aria-label="Open agent ${esc(a.name)}">Open agent</button>`:''}<button type="button" data-copy="${r.id}" aria-label="Copy ${esc(r.title)}">Copy</button>${r.savedTo?'<span class="ag-tag">In workspace</span>':`<button type="button" data-keep="${r.id}" aria-label="Save ${esc(r.title)} to workspace">Save to workspace</button>`}</div></article>`;
@@ -104,10 +104,10 @@
   function vAgent(){
     const a=agentById(openId);if(!a){view='agents';return vAgents();}
     const runs=db.runs.filter(r=>r.agentId===a.id),live=running?.agentId===a.id;
-    return `<header class="ag-head ag-agent-head">${avatar(a,'lg')}<div><div class="ag-eyebrow">AGENT${a.useWorkspace?' · READS WORKSPACE':''}${a.saveToWorkspace?' · SAVES TO WORKSPACE':''}</div><h1>${esc(a.name)}</h1><p class="ag-lede">${esc(a.description)}</p></div><div class="ag-actions"><button type="button" data-edit="${a.id}">Edit</button><button type="button" class="ag-danger" data-delete="${a.id}">Delete</button></div></header>
+    return `<header class="ag-head ag-agent-head">${avatar(a,'lg')}<div><div class="ag-eyebrow">AGENT${a.useWorkspace?' · READS WORKSPACE':''}${a.saveToWorkspace?' · SAVES TO WORKSPACE':''}</div><h1 tabindex="-1">${esc(a.name)}</h1><p class="ag-lede">${esc(a.description)}</p></div><div class="ag-actions"><button type="button" data-edit="${a.id}">Edit</button><button type="button" class="ag-danger" data-delete="${a.id}">Delete</button></div></header>
       ${live?`<section class="ag-card ag-now"><div class="ag-now-top"><div class="ag-eyebrow"><i class="ag-dot"></i> HAPPENING NOW</div><span id="ag-timer" class="ag-timer">${clock(Date.now()-running.started)}</span><button type="button" data-act="cancel">Cancel</button></div><div class="ag-bar"><i></i></div><div class="ag-eyebrow" id="ag-phase" aria-live="polite">${running.answer?'WRITING IT UP…':'THINKING IT THROUGH…'}</div><p class="ag-query">${esc(running.request||a.starter||'Usual run')}</p><div id="ag-stream" class="ag-md ag-stream">${md(running.answer||'')}</div></section>`:''}
       <form class="ag-prompt ag-card" data-run="${a.id}"><label class="sr-only" for="ag-request">Ask for a run</label><textarea id="ag-request" name="request" rows="2" maxlength="5000" placeholder="Ask for a run…">${esc(drafts[a.id]??a.starter??'')}</textarea><div class="ag-prompt-bar"><span class="ag-model">${esc(pick().label)}</span><button type="submit" id="ag-run" class="ag-primary"${running?' aria-disabled="true"':''}>${running?'Running…':'Run it ↗'}</button></div></form>
-      <section><div class="ag-eyebrow ag-section">PREVIOUS RUNS · ${runs.length}</div>${runs.length?`<div class="ag-stack">${runs.map(r=>r.status==='done'?runCard(r,{agent:false}):`<article class="ag-card ag-result ag-failed"><div class="ag-eyebrow">${esc(ago(r.time))} · ${r.status==='cancelled'?'CANCELLED':'DID NOT FINISH'}</div><p>${esc(r.error)}</p>${r.answer?`<details><summary>Partial output</summary><div class="ag-md">${md(r.answer)}</div></details>`:''}<p class="ag-query">${esc(r.request)}</p></article>`).join('')}</div>`:'<p class="ag-note">No runs yet. Ask for one above.</p>'}</section>`;
+      <section><div class="ag-eyebrow ag-section" role="heading" aria-level="2">PREVIOUS RUNS · ${runs.length}</div>${runs.length?`<div class="ag-stack">${runs.map(r=>r.status==='done'?runCard(r,{agent:false,level:3}):`<article class="ag-card ag-result ag-failed"><div class="ag-eyebrow" role="heading" aria-level="3">${esc(ago(r.time))} · ${r.status==='cancelled'?'CANCELLED':'DID NOT FINISH'}</div><p>${esc(r.error)}</p>${r.answer?`<details><summary>Partial output</summary><div class="ag-md">${md(r.answer)}</div></details>`:''}<p class="ag-query">${esc(r.request)}</p></article>`).join('')}</div>`:'<p class="ag-note">No runs yet. Ask for one above.</p>'}</section>`;
   }
   function preview(){
     const d=w||{};
@@ -131,14 +131,18 @@
   function draw(){
     if(view==='wizard'&&!w)view='agents';
     const main=view==='ready'?vReady():view==='templates'?vTemplates():view==='settings'?vSettings():view==='agent'?vAgent():view==='wizard'?vWizard():vAgents();
-    // Every draw replaces the DOM: find the focused control again by its id or first data attribute, else keep focus in the studio.
+    // Every draw replaces the DOM: find the focused control or view heading again by its id or first data attribute, else keep focus in the studio.
     const el=document.activeElement?.closest?.('#agents-app')?document.activeElement:null;
     const [k,v]=el?Object.entries(el.dataset)[0]||[]:[];
     const sel=el?.id?'#'+CSS.escape(el.id):k?`[data-${k}="${CSS.escape(v)}"]`:null;
+    const head=el?.matches('.ag-main h1');
     root.innerHTML=side()+`<main class="ag-main" tabindex="-1">${main}</main>`;
+    if(head)return root.querySelector('.ag-main h1')?.focus({preventScroll:true});
     if(el)((sel&&root.querySelector(sel))||root.querySelector('.ag-main'))?.focus({preventScroll:!sel});
   }
-  function go(v,id){const moved=v!==view;view=v;openId=id??openId;draw();const m=root.querySelector('.ag-main');m?.scrollTo(0,0);if(moved&&root.contains(document.activeElement))m?.focus({preventScroll:true});}
+  // A new view or wizard step moves focus to its heading, so screen readers announce where you are without reading the whole page.
+  const focusHead=()=>(root.querySelector('.ag-main h1')||root.querySelector('.ag-main'))?.focus({preventScroll:true});
+  function go(v,id){const moved=v!==view;view=v;openId=id??openId;draw();root.querySelector('.ag-main')?.scrollTo(0,0);if(moved&&document.body.classList.contains('mode-agents'))focusHead();}
   const saveDraft=()=>{db.draft=w;persist();};
   function startWizard(seedData={},step=0){w={step,goal:'',questions:[],qi:0,answers:[],name:'',description:'',instructions:'',starter:'',useWorkspace:false,saveToWorkspace:false,...seedData};saveDraft();go('wizard');}
 
@@ -158,7 +162,7 @@
   async function toIdentity(){
     const data=await design('identity');
     for(const k of ['name','description','instructions','starter'])if(!w[k]||w.redraft)w[k]=data[k]||w[k];
-    w.redraft=false;w.step=2;saveDraft();draw();
+    w.redraft=false;w.step=2;saveDraft();draw();focusHead();
   }
   function answer(text){
     const q=w.questions[w.qi];w.answers=w.answers.filter(a=>a.question!==q.question).concat(text?[{question:q.question,answer:text}]:[]);
@@ -188,7 +192,7 @@
       Object.assign(record,{status:'done',title:data.title,answer:data.answer,highlights:data.highlights,nextSteps:data.nextSteps,model:`${data.providerLabel} · ${data.model}`,reviewed:false});
       if(a.saveToWorkspace)keep(record);
       toast(`${a.name} finished. The result is in Ready for you.`);
-    }catch(e){Object.assign(record,{status:ctrl.signal.aborted?'cancelled':'error',error:ctrl.signal.aborted?'Cancelled or timed out. Nothing was saved to your workspace.':e.message,answer:running.answer});}
+    }catch(e){Object.assign(record,{status:ctrl.signal.aborted?'cancelled':'error',error:ctrl.signal.aborted?'Cancelled or timed out. Nothing was saved to your workspace.':e.message,answer:running.answer});toast(`${a.name} ${ctrl.signal.aborted?'stopped':'did not finish'}. Details are in its previous runs.`);}
     finally{clearTimeout(timeout);clearInterval(ticker);running=null;db.runs.unshift(record);db.runs=db.runs.slice(0,100);persist();if(view==='agent'&&openId===a.id||view!=='wizard')draw();}
   }
   // The studio covers the workspace; inert keeps Tab, screen readers and scroll-into-view out of what sits behind it.
@@ -212,11 +216,11 @@
       case 'cancel':return running?.ctrl.abort();
       case 'wipe':if(confirm('Delete every agent, result and draft stored in this browser? Workspace objects are not affected.')){db={agents:[],runs:[],draft:null};w=null;persist();go('agents');}return;
       case 'exit':saveDraft();toast(w.editingId?'Changes kept as a draft.':'Draft saved. Pick it up from New agent.');return go(w.editingId?'agent':'agents',w.editingId||openId);
-      case 'prev':if(w.step===1&&w.qi>0)w.qi--;else if(w.step===2&&w.questions.length&&!w.editingId){w.step=1;w.qi=w.questions.length-1;}else w.step=Math.max(0,w.step===2&&!w.questions.length?0:w.step-1);saveDraft();return draw();
+      case 'prev':if(w.step===1&&w.qi>0)w.qi--;else if(w.step===2&&w.questions.length&&!w.editingId){w.step=1;w.qi=w.questions.length-1;}else w.step=Math.max(0,w.step===2&&!w.questions.length?0:w.step-1);saveDraft();draw();return focusHead();
       case 'skip':w.redraft=true;return toIdentity();
-      case 'next':if(w.step===2&&(!w.name?.trim()||!w.instructions?.trim())){toast('Give the agent a name and instructions.');return root.querySelector(`[data-field=${w.name?.trim()?'instructions':'name'}]`)?.focus();}w.step++;saveDraft();return draw();
+      case 'next':if(w.step===2&&(!w.name?.trim()||!w.instructions?.trim())){toast('Give the agent a name and instructions.');return root.querySelector(`[data-field=${w.name?.trim()?'instructions':'name'}]`)?.focus();}w.step++;saveDraft();draw();return focusHead();
       case 'questions':if(!w.goal?.trim()){const g=root.querySelector('[data-field=goal]');g?.setAttribute('aria-invalid','true');root.querySelector('#ag-goal-err')?.removeAttribute('hidden');return g?.focus();}
-        return design('questions').then(data=>{w.questions=data.questions;w.qi=0;w.answers=[];w.step=1;saveDraft();draw();});
+        return design('questions').then(data=>{w.questions=data.questions;w.qi=0;w.answers=[];w.step=1;saveDraft();draw();focusHead();});
       case 'create':{
         const fields={name:w.name.trim(),description:(w.description||'').trim(),instructions:w.instructions.trim(),starter:(w.starter||'').trim(),goal:w.goal,answers:w.answers,useWorkspace:!!w.useWorkspace,saveToWorkspace:!!w.saveToWorkspace,updated:new Date().toISOString()};
         if(!fields.name||!fields.instructions){w.step=2;draw();toast('Give the agent a name and instructions.');return root.querySelector(`[data-field=${w.name?.trim()?'instructions':'name'}]`)?.focus();}
@@ -242,8 +246,8 @@
   document.addEventListener('keydown',e=>{if(e.key!=='Escape'||e.defaultPrevented||view!=='wizard'||loading||document.querySelector('dialog[open]')||e.target.matches?.('select'))return;e.preventDefault();saveDraft();toast(w.editingId?'Changes kept as a draft.':'Draft saved. Pick it up from New agent.');go(w.editingId?'agent':'agents',w.editingId||openId);});
   const toggle=document.createElement('button');toggle.id='agents-toggle';toggle.type='button';toggle.className='agents-toggle';toggle.textContent='✦ Agents';toggle.onclick=()=>setMode('agents');
   $('#help')?.before(toggle);
-  // The model list loads asynchronously; refresh the labels that show it once it settles.
-  $('#ai-model')?.addEventListener('change',()=>{if(document.body.classList.contains('mode-agents')&&view!=='wizard')draw();});
+  // The model list loads asynchronously; refresh the labels that show the provider and model when either changes.
+  for(const id of ['#ai-provider','#ai-model'])$(id)?.addEventListener('change',()=>{if(document.body.classList.contains('mode-agents')&&view!=='wizard')draw();});
   let mode='agents';try{mode=localStorage.getItem(MODE)||'agents';}catch{}
   setMode(mode==='workspace'?'workspace':'agents');
   setTimeout(()=>{if(document.body.classList.contains('mode-agents')&&!['wizard'].includes(view)&&!running)draw();},2500);
