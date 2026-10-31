@@ -66,6 +66,9 @@ body.mode-agents .agents-app{display:grid}
 .ag-actions button:hover,.ag-wiz-foot button:hover{border-color:var(--ag-accent)}
 .agents-app .ag-primary{border:0!important;background:var(--ag-cta)!important;color:var(--ag-accent-ink)!important;font-weight:600}
 .agents-app .ag-primary:disabled,.agents-app .ag-primary[aria-disabled=true]{opacity:.55;cursor:default}
+.ag-err{margin:8px 0 0;color:#b3261e;font-size:14px}
+[data-mode="dark"] .ag-err{color:#f09a92}
+.ag-input[aria-invalid="true"]{border-color:#b3261e}
 .agents-app .ag-danger{color:#b3261e;border-color:color-mix(in srgb,#b3261e 35%,transparent)}
 [data-mode="dark"] .agents-app .ag-danger{color:#f09a92}
 .ag-tag{padding:3px 9px;border-radius:99px;background:var(--ag-soft);color:var(--ag-accent-text);font:600 11px/1.4 var(--ag-mono);letter-spacing:.04em}
@@ -159,7 +162,7 @@ body.mode-agents .agents-app{display:grid}
 @media (max-width:860px){
   .agents-app{grid-template-columns:1fr;grid-template-rows:auto 1fr}
   .ag-side{flex-direction:row;flex-wrap:wrap;align-items:center;padding:10px 16px;border-right:0;border-bottom:1px solid var(--ag-line);gap:8px}
-  .ag-side nav{flex-direction:row;overflow-x:auto;flex:1 1 100%;order:3}
+  .ag-side nav{flex-direction:row;flex-wrap:wrap;flex:1 1 100%;order:3}
   .ag-side nav button{white-space:nowrap;width:auto}
   .ag-side-foot{margin:0 0 0 auto;flex-direction:row;padding:0}
   .ag-side-foot .ag-model{display:none}
@@ -167,6 +170,7 @@ body.mode-agents .agents-app{display:grid}
   .ag-wiz-body{grid-template-columns:1fr}
   .ag-preview{position:static;order:-1}
   .ag-agent-head{flex-wrap:wrap}
+  .ag-agent-head>.ag-actions{flex-basis:100%}
 }
 /* Touch: 44px targets, and 16px fields so iOS does not zoom on focus. */
 @media (pointer:coarse){
