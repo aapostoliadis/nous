@@ -46,7 +46,10 @@ if(!process.argv.includes('--fixture')){
       const home=await request('/');assert.equal(home.status,200);assert.match(home.body,/<html/i);
       const assets=[...home.body.matchAll(/(?:src|href)="([^"#]+\.(?:js|css|svg|woff2)(?:\?[^"#]*)?)"/g)].map(m=>m[1]).filter(p=>!p.includes('://'));
       assert.ok(assets.length>=14,'All script and stylesheet links must be checked');
-      for(const asset of assets)assert.equal((await request('/'+asset.replace(/^\//,''))).status,200,asset);
+      const cssUrls=new Set();
+      for(const asset of assets){const file='/'+asset.replace(/^\//,'').split('?')[0];const res=await request(file);assert.equal(res.status,200,asset);if(file.endsWith('.css'))for(const m of res.body.matchAll(/url\(\s*['"]?([^'")]+)['"]?\s*\)/g))if(!/^(?:data:|[a-z]+:|#)/i.test(m[1]))cssUrls.add(path.posix.join(path.posix.dirname(file),m[1].split(/[?#]/)[0]));}
+      assert.ok(cssUrls.size>=3,'Fonts and images referenced from CSS must be checked');
+      for(const url of cssUrls)assert.equal((await request(url)).status,200,url); // A missing texture or font would otherwise pass unnoticed.
       assert.equal((await request('/',{method:'HEAD'})).body,'');
       for(const privatePath of ['/.env.local','/server.cjs','/providers.cjs','/vercel.json','/../.env.local'])assert.equal((await request(privatePath)).status,404,privatePath);
       assert.equal((await request('/',{headers:{Host:'attacker.example'}})).status,403);
@@ -72,7 +75,7 @@ if(!process.argv.includes('--fixture')){
         assert.equal((await request('/',{headers:{Origin:'http://'+host}})).status,403);
         assert.equal((await request('/',{headers:{Origin:'https://nous-preview.vercel.app'}})).status,403);
       }
-      console.log(`Hosting ${hosted?'Vercel':'local'}: HTML, ${assets.length} assets, streaming, origins and private routes passed.`);
+      console.log(`Hosting ${hosted?'Vercel':'local'}: HTML, ${assets.length} assets, ${cssUrls.size} CSS fonts and images, streaming, origins and private routes passed.`);
     }finally{await new Promise(r=>server.close(r));}
   })().catch(error=>{console.error(error);process.exitCode=1;});
 }
