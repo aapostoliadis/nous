@@ -39,7 +39,7 @@
       if(code){if(line.trim().startsWith('```')){out.push(`<pre><code>${code.join('\n')}</code></pre>`);code=null;}else code.push(line);continue;}
       if(line.trim().startsWith('```')){flush();code=[];continue;}
       const h=line.match(/^(#{1,4})\s+(.*)/),li=line.match(/^\s*[-*]\s+(.*)/),ol=line.match(/^\s*\d+[.)]\s+(.*)/);
-      if(h){flush();out.push(`<h${Math.min(h[1].length+2,6)}>${inline(h[2])}</h${Math.min(h[1].length+2,6)}>`);}
+      if(h){flush();out.push(`<h${Math.min(h[1].length+1,6)}>${inline(h[2])}</h${Math.min(h[1].length+1,6)}>`);}
       else if(li||ol){if(para.length){const p=para;para=[];out.push(`<p>${inline(p.join(' '))}</p>`);}const tag=li?'ul':'ol';if(list?.tag!==tag){flush();list={tag,items:[]};}list.items.push((li||ol)[1]);}
       else if(/^\|.*\|$/.test(line.trim())){flush();if(!/^\|[\s:|-]+\|$/.test(line.trim()))out.push(`<p class="ag-row">${inline(line.trim().slice(1,-1).split('|').map(c=>c.trim()).join(' · '))}</p>`);}
       else if(!line.trim())flush();else{if(list)flush();para.push(line.trim());}
@@ -62,10 +62,10 @@
   const post=(url,provider,body,signal)=>fetch(url,{method:'POST',headers:{'Content-Type':'application/json',...window.providerHeaders(provider)},signal,body:JSON.stringify(body)});
 
   function side(){
-    const n=unreviewed().length,item=(id,label,icon,count)=>`<button type="button" data-go="${id}" ${view===id||(id==='agents'&&view==='agent')?'aria-current="page"':''}><span class="ag-ico" aria-hidden="true">${icon}</span>${label}${count?`<b>${count}</b>`:''}</button>`;
+    const n=unreviewed().length,item=(id,label,icon,count,unit)=>`<button type="button" data-go="${id}" ${view===id||(id==='agents'&&view==='agent')?'aria-current="page"':''}><span class="ag-ico" aria-hidden="true">${icon}</span>${label}${count?`<b>${count}<span class="sr-only"> ${unit}</span></b>`:''}</button>`;
     return `<aside class="ag-side"><div class="ag-brand"><span class="nous-artwork brand-artwork" aria-hidden="true"></span><small>AGENTS</small></div>
       <button type="button" class="ag-new" data-act="new">＋ New agent</button>
-      <nav aria-label="Agents">${item('ready','Ready for you','◉',n)}${running?`<button type="button" data-open="${running.agentId}" class="ag-doing"><span class="ag-ico ag-pulse" aria-hidden="true">◌</span>Doing for you<b>1</b></button>`:''}${item('agents','My agents','◇',db.agents.length)}${item('templates','Templates','▦')}${item('settings','Settings','⚙')}</nav>
+      <nav aria-label="Agents">${item('ready','Ready for you','◉',n,n===1?'result':'results')}${running?`<button type="button" data-open="${running.agentId}" class="ag-doing"><span class="ag-ico ag-pulse" aria-hidden="true">◌</span>Doing for you<b>1<span class="sr-only"> running</span></b></button>`:''}${item('agents','My agents','◇',db.agents.length,db.agents.length===1?'agent':'agents')}${item('templates','Templates','▦')}${item('settings','Settings','⚙')}</nav>
       <div class="ag-side-foot"><button type="button" data-act="workspace">Thinking workspace ↗</button><span class="ag-model" title="Provider and model used for runs">${esc(pick().label)}</span></div></aside>`;
   }
   const header=(eyebrow,h1,lede='')=>`<header class="ag-head"><div class="ag-eyebrow">${eyebrow}</div><h1>${h1}</h1>${lede?`<p class="ag-lede">${lede}</p>`:''}</header>`;
@@ -74,7 +74,7 @@
     return `<article class="ag-card ag-result"><div class="ag-result-top">${agent?avatar(a,'sm'):''}<div><div class="ag-eyebrow">${agent?esc(a.name)+' · ':''}${esc(ago(r.time))}</div><h2>${esc(r.title)}</h2></div></div>
       ${r.highlights?.length?`<ul class="ag-highlights">${r.highlights.map(h=>`<li>${esc(h)}</li>`).join('')}</ul>`:''}
       <details><summary>Read the full result</summary><div class="ag-md">${md(r.answer)}</div>${r.nextSteps?.length?`<div class="ag-eyebrow">NEXT STEPS</div><ul class="ag-highlights">${r.nextSteps.map(h=>`<li>${esc(h)}</li>`).join('')}</ul>`:''}<p class="ag-note">${esc(r.model||'')} · Model output, not verified. Check facts before relying on it.</p></details>
-      <div class="ag-actions">${r.reviewed?'<span class="ag-tag">Reviewed</span>':`<button type="button" class="ag-primary" data-review="${r.id}">Mark reviewed</button>`}${agent&&agentById(r.agentId)?`<button type="button" data-open="${r.agentId}">Open agent</button>`:''}<button type="button" data-copy="${r.id}">Copy</button>${r.savedTo?'<span class="ag-tag">In workspace</span>':`<button type="button" data-keep="${r.id}">Save to workspace</button>`}</div></article>`;
+      <div class="ag-actions">${r.reviewed?'<span class="ag-tag">Reviewed</span>':`<button type="button" class="ag-primary" data-review="${r.id}" aria-label="Mark ${esc(r.title)} reviewed">Mark reviewed</button>`}${agent&&agentById(r.agentId)?`<button type="button" data-open="${r.agentId}" aria-label="Open agent ${esc(a.name)}">Open agent</button>`:''}<button type="button" data-copy="${r.id}" aria-label="Copy ${esc(r.title)}">Copy</button>${r.savedTo?'<span class="ag-tag">In workspace</span>':`<button type="button" data-keep="${r.id}" aria-label="Save ${esc(r.title)} to workspace">Save to workspace</button>`}</div></article>`;
   }
   function vReady(){
     const list=unreviewed();
@@ -83,12 +83,12 @@
   }
   function vAgents(){
     return header('MY AGENTS',accent('Your','agents.'),'Each agent is a set of instructions that runs on your own ChatGPT or Claude key.')+
-      `<div class="ag-grid">${db.agents.map(a=>{const last=db.runs.find(r=>r.agentId===a.id);return `<article class="ag-card ag-agent"><button type="button" class="ag-cover" data-open="${a.id}" aria-label="Open ${esc(a.name)}"></button>${avatar(a)}<h2>${esc(a.name)}</h2><p>${esc(a.description)}</p><div class="ag-meta">${a.useWorkspace?'<span class="ag-tag">Workspace</span>':''}<span>${last?'Last run '+esc(ago(last.time)):'Not run yet'}</span></div><div class="ag-actions"><button type="button" class="ag-primary" data-open="${a.id}">Run ↗</button><button type="button" data-edit="${a.id}">Edit</button></div></article>`;}).join('')}
+      `<div class="ag-grid">${db.agents.map(a=>{const last=db.runs.find(r=>r.agentId===a.id);return `<article class="ag-card ag-agent"><button type="button" class="ag-cover" data-open="${a.id}" aria-label="Open ${esc(a.name)}"></button>${avatar(a)}<h2>${esc(a.name)}</h2><p>${esc(a.description)}</p><div class="ag-meta">${a.useWorkspace?'<span class="ag-tag">Workspace</span>':''}<span>${last?'Last run '+esc(ago(last.time)):'Not run yet'}</span></div><div class="ag-actions"><button type="button" class="ag-primary" data-open="${a.id}" aria-label="Run ${esc(a.name)}">Run ↗</button><button type="button" data-edit="${a.id}" aria-label="Edit ${esc(a.name)}">Edit</button></div></article>`;}).join('')}
       <button type="button" class="ag-card ag-add" data-act="new"><span>＋</span>Add an agent<small>Describe it, answer a few questions, done.</small></button></div>`;
   }
   function vTemplates(){
     return header('TEMPLATES',accent('Start from a','template.'),'Starter agents written for what Nous can actually do today. Each opens in the wizard so you can change anything.')+
-      `<div class="ag-grid">${TEMPLATES.map((t,i)=>`<article class="ag-card ag-agent">${avatar(t)}<h2>${esc(t.name)}</h2><p>${esc(t.description)}</p><div class="ag-meta">${t.useWorkspace?'<span class="ag-tag">Uses workspace</span>':''}</div><div class="ag-actions"><button type="button" class="ag-primary" data-template="${i}">Use template</button></div></article>`).join('')}</div>`;
+      `<div class="ag-grid">${TEMPLATES.map((t,i)=>`<article class="ag-card ag-agent">${avatar(t)}<h2>${esc(t.name)}</h2><p>${esc(t.description)}</p><div class="ag-meta">${t.useWorkspace?'<span class="ag-tag">Uses workspace</span>':''}</div><div class="ag-actions"><button type="button" class="ag-primary" data-template="${i}" aria-label="Use template ${esc(t.name)}">Use template</button></div></article>`).join('')}</div>`;
   }
   function vSettings(){
     const sel=$('#ai-provider'),mod=$('#ai-model');
@@ -118,7 +118,7 @@
     const s=w.step,bar=STEPS.map((l,i)=>`<i class="${i<s?'done':i===s?'now':''}" title="${l}"></i>`).join('');
     let body='';
     if(loading)body=`<div class="ag-loading" role="status"><nous-orb state="working" size="40"></nous-orb><p>${esc(loading)}</p></div>`;
-    else if(s===0)body=header('STEP 1 · PURPOSE',accent('What should your agent','do for you?'),'Describe the job in a sentence or two. You can change everything later.')+`<textarea class="ag-input" data-field="goal" aria-label="What should your agent do?" rows="5" maxlength="2000" placeholder="e.g. Every Friday, turn my notes into a one-page brief for my team">${esc(w.goal||'')}</textarea><div class="ag-chips">${TEMPLATES.slice(0,4).map((t,i)=>`<button type="button" data-template="${i}">${esc(t.name)}</button>`).join('')}</div><div class="ag-wiz-foot"><span></span><button type="button" class="ag-primary" data-act="questions">Continue →</button></div>`;
+    else if(s===0)body=header('STEP 1 · PURPOSE',accent('What should your agent','do for you?'),'Describe the job in a sentence or two. You can change everything later.')+`<textarea class="ag-input" data-field="goal" aria-label="What should your agent do?" aria-describedby="ag-goal-err" rows="5" maxlength="2000" placeholder="e.g. Every Friday, turn my notes into a one-page brief for my team">${esc(w.goal||'')}</textarea><p class="ag-err" id="ag-goal-err" hidden>Describe what the agent should do first.</p><div class="ag-chips">${TEMPLATES.slice(0,4).map((t,i)=>`<button type="button" data-template="${i}">${esc(t.name)}</button>`).join('')}</div><div class="ag-wiz-foot"><span></span><button type="button" class="ag-primary" data-act="questions">Continue →</button></div>`;
     else if(s===1){const q=w.questions[w.qi],chosen=w.answers.find(a=>a.question===q.question)?.answer;
       body=header(`${esc(q.topic)} · ${w.qi+1} OF ${w.questions.length}`,esc(q.question))+`<div class="ag-options">${q.options.map((o,i)=>`<button type="button" data-answer="${esc(o)}" aria-pressed="${chosen===o}"><kbd>${'ABC'[i]}</kbd>${esc(o)}</button>`).join('')}
         <form class="ag-own" data-own><kbd>✎</kbd><input name="own" aria-label="Your own answer" maxlength="1000" placeholder="None of these — I'll say it my way" value="${chosen&&!q.options.includes(chosen)?esc(chosen):''}"><button type="submit">Use</button></form></div>
@@ -138,7 +138,7 @@
     root.innerHTML=side()+`<main class="ag-main" tabindex="-1">${main}</main>`;
     if(el)((sel&&root.querySelector(sel))||root.querySelector('.ag-main'))?.focus({preventScroll:!sel});
   }
-  function go(v,id){view=v;openId=id??openId;draw();root.querySelector('.ag-main')?.scrollTo(0,0);}
+  function go(v,id){const moved=v!==view;view=v;openId=id??openId;draw();const m=root.querySelector('.ag-main');m?.scrollTo(0,0);if(moved&&root.contains(document.activeElement))m?.focus({preventScroll:true});}
   const saveDraft=()=>{db.draft=w;persist();};
   function startWizard(seedData={},step=0){w={step,goal:'',questions:[],qi:0,answers:[],name:'',description:'',instructions:'',starter:'',useWorkspace:false,saveToWorkspace:false,...seedData};saveDraft();go('wizard');}
 
@@ -215,7 +215,7 @@
       case 'prev':if(w.step===1&&w.qi>0)w.qi--;else if(w.step===2&&w.questions.length&&!w.editingId){w.step=1;w.qi=w.questions.length-1;}else w.step=Math.max(0,w.step===2&&!w.questions.length?0:w.step-1);saveDraft();return draw();
       case 'skip':w.redraft=true;return toIdentity();
       case 'next':if(w.step===2&&(!w.name?.trim()||!w.instructions?.trim())){toast('Give the agent a name and instructions.');return root.querySelector(`[data-field=${w.name?.trim()?'instructions':'name'}]`)?.focus();}w.step++;saveDraft();return draw();
-      case 'questions':if(!w.goal?.trim()){toast('Describe what the agent should do first.');return root.querySelector('[data-field=goal]')?.focus();}
+      case 'questions':if(!w.goal?.trim()){const g=root.querySelector('[data-field=goal]');g?.setAttribute('aria-invalid','true');root.querySelector('#ag-goal-err')?.removeAttribute('hidden');return g?.focus();}
         return design('questions').then(data=>{w.questions=data.questions;w.qi=0;w.answers=[];w.step=1;saveDraft();draw();});
       case 'create':{
         const fields={name:w.name.trim(),description:(w.description||'').trim(),instructions:w.instructions.trim(),starter:(w.starter||'').trim(),goal:w.goal,answers:w.answers,useWorkspace:!!w.useWorkspace,saveToWorkspace:!!w.saveToWorkspace,updated:new Date().toISOString()};
@@ -225,7 +225,7 @@
       }
     }
   });
-  root.addEventListener('input',e=>{if(e.target.id==='ag-request'&&openId)drafts[openId]=e.target.value;const f=e.target.dataset.field;if(f&&w){w[f]=e.target.value;saveDraft();const p=root.querySelector('#ag-preview');if(p)p.innerHTML=preview();}});
+  root.addEventListener('input',e=>{if(e.target.id==='ag-request'&&openId)drafts[openId]=e.target.value;const f=e.target.dataset.field;if(f&&w){w[f]=e.target.value;saveDraft();if(f==='goal'&&e.target.value.trim()){e.target.removeAttribute('aria-invalid');root.querySelector('#ag-goal-err')?.setAttribute('hidden','');}const p=root.querySelector('#ag-preview');if(p)p.innerHTML=preview();}});
   root.addEventListener('change',e=>{
     const t=e.target;
     if(t.dataset.toggle&&w){w[t.dataset.toggle]=t.checked;saveDraft();root.querySelector('#ag-preview').innerHTML=preview();}
