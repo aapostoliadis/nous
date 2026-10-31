@@ -246,7 +246,7 @@
   root.addEventListener('keydown',e=>{if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)&&e.target.id==='ag-request'){e.preventDefault();e.target.form.requestSubmit();}});
   // Escape leaves the wizard the same way its Exit button does; skipped when an open dialog or another handler has claimed the key.
   document.addEventListener('keydown',e=>{if(e.key!=='Escape'||e.defaultPrevented||view!=='wizard'||loading||document.querySelector('dialog[open]')||e.target.matches?.('select'))return;e.preventDefault();saveDraft();toast(w.editingId?'Changes kept as a draft.':'Draft saved. Pick it up from New agent.');go(w.editingId?'agent':'agents',w.editingId||openId);});
-  const toggle=document.createElement('button');toggle.id='agents-toggle';toggle.type='button';toggle.className='agents-toggle';toggle.textContent='✦ Agents';toggle.onclick=()=>setMode('agents');
+  const toggle=document.createElement('button');toggle.id='agents-toggle';toggle.type='button';toggle.className='agents-toggle';toggle.textContent='✦ Agents';toggle.onclick=()=>{setMode('agents');focusHead();};// the toggle goes inert, so focus would drop to body
   $('#help')?.before(toggle);
   // The model list loads asynchronously; refresh the labels that show the provider and model when either changes.
   for(const id of ['#ai-provider','#ai-model'])$(id)?.addEventListener('change',()=>{if(document.body.classList.contains('mode-agents')&&view!=='wizard')draw();});
