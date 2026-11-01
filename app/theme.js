@@ -42,12 +42,13 @@
       menu.hidden=false;button.setAttribute('aria-expanded','true');
       menu.querySelector('[aria-pressed=true]')?.focus();
     });
-    menu.addEventListener('click',e=>{
+    // Options also appear in the agents studio's Settings, which covers this header.
+    document.addEventListener('click',e=>{
       const o=e.target.closest('[data-theme-option]');if(!o)return;
-      const option=o.dataset.themeOption,box=o.querySelector('.theme-swatch').getBoundingClientRect();
+      const inMenu=menu.contains(o),option=o.dataset.themeOption,box=o.querySelector('.theme-swatch').getBoundingClientRect();
       try{localStorage.setItem(KEY,option)}catch{}
-      switchTo(resolve(option),box.left+box.width/2,box.top+box.height/2,()=>close(false));
-      button.focus();
+      switchTo(resolve(option),box.left+box.width/2,box.top+box.height/2,()=>{if(inMenu)close(false)});
+      if(inMenu)button.focus();
     });
     menu.addEventListener('keydown',e=>{
       const items=[...menu.querySelectorAll('button')],i=items.indexOf(document.activeElement);
