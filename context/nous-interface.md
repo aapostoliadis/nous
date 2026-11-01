@@ -284,3 +284,24 @@ be raised while the studio is open and must stay reachable.
 first version). Rejected because covering does not stop focus. Other
 options, such as unmounting the workspace while the studio is open, were
 not weighed: alternatives beyond this one are unknown.
+
+## Nous has four styles, and System picks Light or Warm ink
+
+**Id:** 5297a405-1b53-47f2-8579-78953b15a71f
+**Type:** decision
+**Status:** active
+**Evidence:** inferred
+**Source:** nous commits 9ac5e55 and 4a6738a
+
+A palette menu in the header switches between Light, Graphite, Forest
+and Warm ink, plus System (`app/theme.js`). The choice is saved per
+device under `nous-theme`. Without a saved choice, System follows the
+OS light/dark setting live, using Light or Warm ink. A saved `dark`
+from the earlier single dark mode is read as Warm ink.
+
+**Reason:** unknown. The three dark palettes were rendered side by side
+for a pick, but why all three were kept as options, and why Warm ink is
+the dark default, was not recorded.
+
+**Rejected alternative:** the single dark mode that Warm ink replaced;
+why it lost is unknown.
