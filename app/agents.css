@@ -116,6 +116,9 @@ body.mode-agents .agents-app{display:grid}
 .ag-prompt:focus-within{border-color:var(--ag-accent);outline:2px solid var(--ag-accent);outline-offset:2px}
 .ag-prompt-bar{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .ag-prompt-bar button{padding:9px 18px;border-radius:99px}
+.ag-run-group{display:flex;align-items:center;gap:10px;flex:none}
+.ag-hint{font:11px/1 var(--ag-mono);color:var(--ag-muted)}
+@media (hover:none){.ag-hint{display:none}}
 
 /* Wizard */
 .ag-wizard{display:flex;flex-direction:column;gap:28px}
