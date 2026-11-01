@@ -289,7 +289,8 @@ not weighed: alternatives beyond this one are unknown.
 
 **Id:** 5297a405-1b53-47f2-8579-78953b15a71f
 **Type:** decision
-**Status:** active
+**Status:** superseded
+**Superseded by:** 84f8fe78-0b1e-450e-8634-cc243f909a8d
 **Evidence:** inferred
 **Source:** nous commits 9ac5e55 and 4a6738a
 
@@ -305,3 +306,25 @@ the dark default, was not recorded.
 
 **Rejected alternative:** the single dark mode that Warm ink replaced;
 why it lost is unknown.
+
+## Nous has two styles, Light by default
+
+**Id:** 84f8fe78-0b1e-450e-8634-cc243f909a8d
+**Type:** decision
+**Status:** active
+**Evidence:** confirmed
+**Source:** maintainer request; `app/theme.js`, `app/dark-theme.css`
+
+The style menu offers System, Light and Warm ink. Without a saved
+choice Nous shows Light; System (saved as `system`) follows the OS
+setting live. Each option shows a tile in its own colours with an icon:
+a desktop for System, a sun for Light, a moon for Warm ink. Saved
+`dark`, `graphite` and `forest` values open in Warm ink.
+
+**Reason:** unknown. The maintainer asked to keep one dark style and to
+default to Light; why was not stated.
+
+**Rejected alternatives:** keeping Graphite and Forest beside Warm ink
+(removed), and following the OS setting when nothing is saved (the
+previous default). The icon tiles were picked over other renderings
+shown side by side; why is unknown.
