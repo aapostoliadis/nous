@@ -4,8 +4,8 @@
   const KEY='nous-agents-v1',MODE='nous-mode';
   let db;try{db=JSON.parse(localStorage.getItem(KEY));}catch{}
   if(!Array.isArray(db?.agents)||!Array.isArray(db?.runs))db={agents:[],runs:[],draft:null};
-  // A run is stored as running from its first moment, so closing the tab mid-run still leaves a record; on load it can only have been interrupted.
-  for(const r of db.runs)if(r.status==='running')Object.assign(r,{status:'error',error:'Interrupted: the page closed or reloaded before this run finished. Nothing was saved to your workspace.'});
+  // A run is stored as running from its first moment, so closing the tab mid-run still leaves a record. Its tab stamps a heartbeat every few seconds (zeroed on pagehide), so a fresh one means the run is still live in another tab.
+  for(const r of db.runs)if(r.status==='running'&&!(Date.now()-r.beat<15000))Object.assign(r,{status:'error',error:'Interrupted: the page closed or reloaded before this run finished. Nothing was saved to your workspace.'});
   const persist=()=>{try{localStorage.setItem(KEY,JSON.stringify(db));}catch{toast('This browser is blocking storage, so agents last for this session only.');}};
   const root=document.createElement('div');root.id='agents-app';root.className='agents-app';
   document.body.append(root);
@@ -86,7 +86,7 @@
     return `<article class="ag-card ag-result"><div class="ag-result-top">${agent?avatar(a,'sm'):''}<div><div class="ag-eyebrow">${agent?esc(a.name)+' · ':''}${esc(ago(r.time))}</div><h2${level?` aria-level="${level}"`:''}>${esc(r.title)}</h2></div></div>
       ${r.highlights?.length?`<ul class="ag-highlights">${r.highlights.map(h=>`<li>${esc(h)}</li>`).join('')}</ul>`:''}
       <details><summary>Read the full result</summary><div class="ag-md">${md(r.answer)}</div>${r.nextSteps?.length?`<div class="ag-eyebrow">NEXT STEPS</div><ul class="ag-highlights">${r.nextSteps.map(h=>`<li>${esc(h)}</li>`).join('')}</ul>`:''}<p class="ag-note">${esc(r.model||'')} · Model output, not verified. Check facts before relying on it.</p></details>
-      <div class="ag-actions">${r.reviewed?'<span class="ag-tag">Reviewed</span>':`<button type="button"${agent?' class="ag-primary"':''} data-review="${r.id}" aria-label="Mark ${esc(r.title)} reviewed">Mark reviewed</button>`}${agent&&agentById(r.agentId)?`<button type="button" data-open="${r.agentId}" aria-label="Open agent ${esc(a.name)}">Open agent</button>`:''}${agent?'':again(r)}<button type="button" data-copy="${r.id}" aria-label="Copy ${esc(r.title)}">Copy</button>${r.savedTo?'<span class="ag-tag">In workspace</span>':`<button type="button" data-keep="${r.id}" aria-label="Save ${esc(r.title)} to workspace">Save to workspace</button>`}</div></article>`;
+      <div class="ag-actions">${r.reviewed?'<span class="ag-tag">Reviewed</span>':`<button type="button"${agent?' class="ag-primary"':''} data-review="${r.id}" aria-label="Mark ${esc(r.title)} reviewed">Mark reviewed</button>`}${agent&&agentById(r.agentId)?`<button type="button" data-open="${r.agentId}" aria-label="Open agent ${esc(a.name)}">Open agent</button>`:''}${agent?'':again(r)}<button type="button" data-copy="${r.id}" aria-label="Copy ${esc(r.title)}">Copy</button><button type="button" data-download="${r.id}" aria-label="Download ${esc(r.title)} as Markdown">Download .md</button>${r.savedTo?'<span class="ag-tag">In workspace</span>':`<button type="button" data-keep="${r.id}" aria-label="Save ${esc(r.title)} to workspace">Save to workspace</button>`}<button type="button" class="ag-danger" data-drop="${r.id}" aria-label="Delete ${esc(r.title)}">Delete</button></div></article>`;
   }
   function vReady(){
     const list=unreviewed();
@@ -120,8 +120,8 @@
     const runs=db.runs.filter(r=>r.agentId===a.id&&r.status!=='running'),live=running?.agentId===a.id;
     return `<header class="ag-head ag-agent-head">${avatar(a,'lg')}<div><div class="ag-eyebrow">AGENT${a.useWorkspace?' · READS WORKSPACE':''}${a.saveToWorkspace?' · SAVES TO WORKSPACE':''}</div><h1 tabindex="-1">${esc(a.name)}</h1><p class="ag-lede">${esc(a.description)}</p></div><div class="ag-actions"><button type="button" data-edit="${a.id}">Edit</button><button type="button" data-duplicate="${a.id}">Duplicate</button><button type="button" class="ag-danger" data-delete="${a.id}">Delete</button></div></header>
       ${live?`<section class="ag-card ag-now"><div class="ag-now-top"><div class="ag-eyebrow"><i class="ag-dot"></i> HAPPENING NOW</div><span id="ag-timer" class="ag-timer">${clock(Date.now()-running.started)}</span><button type="button" data-act="cancel">Cancel</button></div><div class="ag-bar"><i></i></div><div class="ag-eyebrow" id="ag-phase" aria-live="polite">${running.answer?'WRITING IT UP…':'THINKING IT THROUGH…'}</div><p class="ag-query">${esc(running.request||a.starter||'Usual run')}</p><div id="ag-stream" class="ag-md ag-stream">${md(running.answer||'')}</div></section>`:''}
-      <form class="ag-prompt ag-card" data-run="${a.id}"><label class="sr-only" for="ag-request">Ask for a run</label><textarea id="ag-request" name="request" rows="2" maxlength="5000" placeholder="Ask for a run…">${esc(drafts[a.id]??a.starter??'')}</textarea><div class="ag-prompt-bar"><span class="ag-model">${esc(pick().label)}</span><button type="submit" id="ag-run" class="ag-primary"${running?' aria-disabled="true"':''}>${running?'Running…':'Run it ↗'}</button></div></form>
-      <section><div class="ag-eyebrow ag-section" role="heading" aria-level="2">PREVIOUS RUNS · ${runs.length}</div>${runs.length?`<div class="ag-stack">${runs.map(r=>r.status==='done'?runCard(r,{agent:false,level:3}):`<article class="ag-card ag-result ag-failed"><div class="ag-eyebrow" role="heading" aria-level="3">${esc(ago(r.time))} · ${r.status==='cancelled'?'CANCELLED':'DID NOT FINISH'}</div><p>${esc(r.error)}</p>${r.answer?`<details><summary>Partial output</summary><div class="ag-md">${md(r.answer)}</div></details>`:''}<p class="ag-query">${esc(r.request)}</p><div class="ag-actions">${again(r)}</div></article>`).join('')}</div>`:'<p class="ag-note">No runs yet. Ask for one above.</p>'}</section>`;
+      <form class="ag-prompt ag-card" data-run="${a.id}"><label class="sr-only" for="ag-request">Ask for a run</label><textarea id="ag-request" name="request" rows="2" maxlength="5000" placeholder="Ask for a run…" aria-keyshortcuts="Control+Enter Meta+Enter">${esc(drafts[a.id]??a.starter??'')}</textarea><div class="ag-prompt-bar"><span class="ag-model">${esc(pick().label)}</span><span class="ag-run-group"><kbd class="ag-hint" aria-hidden="true">${/Mac|iP/.test(navigator.platform)?'⌘':'Ctrl'}+Enter</kbd><button type="submit" id="ag-run" class="ag-primary"${running?' aria-disabled="true"':''}>${running?'Running…':'Run it ↗'}</button></span></div></form>
+      <section><div class="ag-eyebrow ag-section" role="heading" aria-level="2">PREVIOUS RUNS · ${runs.length}</div>${runs.length?`<div class="ag-stack">${runs.map(r=>r.status==='done'?runCard(r,{agent:false,level:3}):`<article class="ag-card ag-result ag-failed"><div class="ag-eyebrow" role="heading" aria-level="3">${esc(ago(r.time))} · ${r.status==='cancelled'?'CANCELLED':'DID NOT FINISH'}</div><p>${esc(r.error)}</p>${r.answer?`<details><summary>Partial output</summary><div class="ag-md">${md(r.answer)}</div></details>`:''}<p class="ag-query">${esc(r.request)}</p><div class="ag-actions">${again(r)}<button type="button" class="ag-danger" data-drop="${r.id}" aria-label="Delete the run from ${esc(ago(r.time))}">Delete</button></div></article>`).join('')}</div>`:'<p class="ag-note">No runs yet. Ask for one above.</p>'}</section>`;
   }
   function preview(){
     const d=w||{};
@@ -157,6 +157,7 @@
   // A new view or wizard step moves focus to its heading, so screen readers announce where you are without reading the whole page.
   const focusHead=()=>(root.querySelector('.ag-main h1')||root.querySelector('.ag-main'))?.focus({preventScroll:true});
   // Mark reviewed and Save swap their button for a badge: keep focus on the same card, or on the next result once the card leaves the list.
+  const download=(name,text,type)=>{const url=URL.createObjectURL(new Blob([text],{type}));const link=document.createElement('a');link.href=url;link.download=name;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
   const refocus=id=>{const b=root.querySelector(`[data-copy="${CSS.escape(id)}"]`)||root.querySelector('[data-review]');b?b.focus():focusHead();};
   function go(v,id){const moved=v!==view;view=v;openId=id??openId;draw();root.querySelector('.ag-main')?.scrollTo(0,0);if(moved&&document.body.classList.contains('mode-agents'))focusHead();}
   const saveDraft=()=>{db.draft=w;persist();};
@@ -199,9 +200,9 @@
     const {provider,model,ok}=pick();
     if(!ok){toast(provider&&provider!=='local'&&window.providerReady?.(provider)?'Your key is saved, but no model is available. Choose one in Settings to run agents.':'Add your ChatGPT or Claude key and choose a model to run agents.');return go('settings');}
     const ctrl=new AbortController();running={agentId:a.id,request,started:Date.now(),answer:'',ctrl};go('agent',a.id);
-    const timeout=setTimeout(()=>ctrl.abort(),95000);
-    ticker=setInterval(()=>{const t=root.querySelector('#ag-timer');if(t)t.textContent=clock(Date.now()-running.started);},1000);
-    const record={id:crypto.randomUUID(),agentId:a.id,agentName:a.name,request,time:new Date().toISOString(),status:'running',answer:''};
+    let timedOut=false;const timeout=setTimeout(()=>{timedOut=true;ctrl.abort();},95000);
+    ticker=setInterval(()=>{const t=root.querySelector('#ag-timer');if(t)t.textContent=clock(Date.now()-running.started);if(Date.now()-running.record.beat>=3000){running.record.beat=Date.now();persist();}},1000);
+    const record={id:crypto.randomUUID(),agentId:a.id,agentName:a.name,request,time:new Date().toISOString(),status:'running',answer:'',beat:Date.now()};
     running.record=record;db.runs.unshift(record);trimRuns();persist();
     try{
       const body={provider,model,stream:true,agent:{name:a.name,description:a.description,instructions:a.instructions},request,...(a.useWorkspace?{context:workspaceContext()}:{})};
@@ -209,7 +210,7 @@
       Object.assign(record,{status:'done',title:data.title,answer:data.answer,highlights:data.highlights,nextSteps:data.nextSteps,model:`${data.providerLabel} · ${data.model}`,reviewed:false});
       if(a.saveToWorkspace)keep(record);
       toast(`${a.name} finished. The result is in Ready for you.`);
-    }catch(e){Object.assign(record,{status:ctrl.signal.aborted?'cancelled':'error',error:ctrl.signal.aborted?'Cancelled or timed out. Nothing was saved to your workspace.':e.message,answer:running.answer});toast(`${a.name} ${ctrl.signal.aborted?'stopped':'did not finish'}. Details are in its previous runs.`);}
+    }catch(e){const cancelled=ctrl.signal.aborted&&!timedOut;Object.assign(record,{status:cancelled?'cancelled':'error',error:cancelled?'Cancelled. Nothing was saved to your workspace.':timedOut?`Stopped after 95 seconds, the longest a run can take. Try a shorter request${a.useWorkspace?' or turn off workspace reading for this agent':''}. Nothing was saved to your workspace.`:e.message,answer:running.answer});toast(`${a.name} ${cancelled?'stopped':'did not finish'}. Details are in its previous runs.`);}
     finally{clearTimeout(timeout);clearInterval(ticker);running=null;if(document.activeElement?.dataset?.act==='cancel')root.querySelector('#ag-run')?.focus();persist();if(view==='agent'&&openId===a.id||view!=='wizard')draw();}
   }
   // The studio covers the workspace; inert keeps Tab, screen readers and scroll-into-view out of what sits behind it.
@@ -225,6 +226,8 @@
     if(d.copy){const r=db.runs.find(r=>r.id===d.copy);navigator.clipboard?.writeText(`# ${r.title}\n\n${r.answer}`).then(()=>toast('Copied to the clipboard.'),()=>toast('The browser blocked clipboard access.'));return;}
     if(d.keep){const r=db.runs.find(r=>r.id===d.keep);if(r){keep(r);persist();draw();refocus(r.id);toast('Added to your workspace as an artifact.');}return;}
     if(d.delete){const a=agentById(d.delete),n=db.runs.filter(r=>r.agentId===a.id).length;if(!confirm(`Delete “${a.name}” and its ${n} result${n===1?'':'s'}? Results already saved to the workspace stay there.`))return;db.agents=db.agents.filter(x=>x.id!==a.id);db.runs=db.runs.filter(r=>r.agentId!==a.id);persist();go('agents');return toast('Agent deleted.');}
+    if(d.download){const r=db.runs.find(r=>r.id===d.download);download(`${r.title.toLowerCase().replace(/[^\p{L}\p{N}]+/gu,'-').replace(/^-|-$/g,'').slice(0,60)||'result'}.md`,`# ${r.title}\n\n${r.answer}\n`,'text/markdown');return toast('Downloaded as Markdown.');}
+    if(d.drop){const r=db.runs.find(r=>r.id===d.drop);if(!r||r.status==='done'&&!confirm(`Delete “${r.title}”? A copy already saved to the workspace stays there.`))return;db.runs.splice(db.runs.indexOf(r),1);persist();draw();(root.querySelector(view==='agent'?'#ag-request':'[data-review]')||root.querySelector('h1'))?.focus();return toast('Run deleted.');}
     if(d.rerun){const r=db.runs.find(r=>r.id===d.rerun);return r&&run(agentById(r.agentId),r.request||'');}
     if(d.reuse){const r=db.runs.find(r=>r.id===d.reuse);if(!r)return;drafts[r.agentId]=r.request||'';go('agent',r.agentId);const q=root.querySelector('#ag-request');q?.focus();q?.setSelectionRange(q.value.length,q.value.length);return;}
     if(d.duplicate){const a=agentById(d.duplicate),now=new Date().toISOString(),id=crypto.randomUUID();db.agents.unshift({...a,id,name:`${a.name} (copy)`.slice(0,80),created:now,updated:now});persist();go('agent',id);return toast(`Duplicated as ${a.name} (copy). Edit it to make it your own.`);}
@@ -235,7 +238,7 @@
       case 'keys':return $('#connections').click();
       case 'cancel':return running?.ctrl.abort();
       case 'wipe':if(confirm('Delete every agent, result and draft stored in this browser? Workspace objects are not affected.')){db={agents:[],runs:[],draft:null};w=null;persist();go('agents');toast('All agents and results deleted.');}return;
-      case 'export':{const url=URL.createObjectURL(new Blob([JSON.stringify({nous:'agents',version:1,agents:db.agents},null,2)],{type:'application/json'}));const link=document.createElement('a');link.href=url;link.download='nous-agents.json';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);toast(`Exported ${db.agents.length} agent${db.agents.length===1?'':'s'}. Results and keys are not included.`);return;}
+      case 'export':{download('nous-agents.json',JSON.stringify({nous:'agents',version:1,agents:db.agents},null,2),'application/json');toast(`Exported ${db.agents.length} agent${db.agents.length===1?'':'s'}. Results and keys are not included.`);return;}
       case 'import':return root.querySelector('#ag-import')?.click();
       case 'exit':saveDraft();toast(w.editingId?'Changes kept as a draft.':'Draft saved. Pick it up from New agent.');return go(w.editingId?'agent':'agents',w.editingId||openId);
       case 'prev':if(w.step===1&&w.qi>0)w.qi--;else if(w.step===2&&w.questions.length&&!w.editingId){w.step=1;w.qi=w.questions.length-1;}else w.step=Math.max(0,w.step===2&&!w.questions.length?0:w.step-1);saveDraft();draw();return focusHead();
@@ -273,7 +276,7 @@
   // The model list loads asynchronously; refresh the labels that show the provider and model when either changes.
   for(const id of ['#ai-provider','#ai-model'])$(id)?.addEventListener('change',()=>{if(document.body.classList.contains('mode-agents')&&view!=='wizard')draw();});
   // The streamed text so far goes into the stored record, so an interrupted run keeps its partial output.
-  addEventListener('pagehide',()=>{if(running){running.record.answer=running.answer;persist();}});
+  addEventListener('pagehide',()=>{if(running){Object.assign(running.record,{answer:running.answer,beat:0});persist();}});
   let mode='agents';try{mode=localStorage.getItem(MODE)||'agents';}catch{}
   setMode(mode==='workspace'?'workspace':'agents');
   setTimeout(()=>{if(document.body.classList.contains('mode-agents')&&!['wizard'].includes(view)&&!running)draw();},2500);
