@@ -63,8 +63,8 @@ body.mode-agents .agents-app{display:grid}
 .ag-avatar.sm{width:32px;height:32px;border-radius:10px;font-size:15px}
 .ag-avatar.lg{width:60px;height:60px;border-radius:18px;font-size:26px}
 .ag-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
-.ag-actions button,.ag-wiz-foot button,.ag-own button,.ag-now-top button,.ag-chips button,.ag-follow button{padding:8px 14px;border:1px solid var(--ag-line);border-radius:99px;background:var(--ag-card);font-size:13px}
-.ag-actions button:hover,.ag-wiz-foot button:hover,.ag-follow button:hover{border-color:var(--ag-accent)}
+.ag-actions button,.ag-wiz-foot button,.ag-own button,.ag-now-top button,.ag-chips button,.ag-follow button,.ag-bulk button{padding:8px 14px;border:1px solid var(--ag-line);border-radius:99px;background:var(--ag-card);font-size:13px}
+.ag-actions button:hover,.ag-wiz-foot button:hover,.ag-follow button:hover,.ag-bulk button:hover{border-color:var(--ag-accent)}
 .agents-app .ag-primary{border:0!important;background:var(--ag-cta)!important;color:var(--ag-accent-ink)!important;font-weight:600}
 .agents-app .ag-primary:disabled,.agents-app .ag-primary[aria-disabled=true]{opacity:.55;cursor:default}
 .ag-err{margin:8px 0 0;color:#b3261e;font-size:14px}
@@ -118,6 +118,8 @@ body.mode-agents .agents-app{display:grid}
 .ag-prompt-bar button{padding:9px 18px;border-radius:99px}
 .ag-run-group{display:flex;align-items:center;gap:10px;flex:none}
 .ag-hint{font:11px/1 var(--ag-mono);color:var(--ag-muted)}
+.ag-reads{margin:6px 0 0;font-size:12px;color:var(--ag-muted)}
+.ag-bulk{display:flex;justify-content:flex-end;margin:0 0 12px}
 .ag-follow{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin:0 0 10px;font-size:13px;color:var(--ag-muted)}
 @media (hover:none){.ag-hint{display:none}}
 

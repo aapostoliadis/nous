@@ -24,7 +24,8 @@
     {topic:'FORMAT',question:'What shape should each result take?',options:['A short brief with bullet points','A structured report with sections','A ready-to-send draft']},
     {topic:'DEPTH',question:'How much detail should it go into?',options:['The headline and three key points','A balanced overview','Thorough, with reasoning and caveats']}
   ];
-  let view='agents',openId=null,running=null,ticker=null,loading='',w=db.draft,drafts={},follows={};
+  if(!db.drafts||typeof db.drafts!=='object'||Array.isArray(db.drafts))db.drafts={};
+  let view='agents',openId=null,running=null,ticker=null,loading='',w=db.draft,drafts=db.drafts,follows={},draftTimer=null;
   if(db.runs.some(r=>r.status==='done'&&!r.reviewed))view='ready';
   const agentById=id=>db.agents.find(a=>a.id===id);
   const unreviewed=()=>db.runs.filter(r=>r.status==='done'&&!r.reviewed);
@@ -92,7 +93,7 @@
   function vReady(){
     const list=unreviewed();
     return header('READY FOR YOU',list.length?accent('Fresh results,','waiting for you.'):accent('All','caught up.'),list.length?`${list.length} result${list.length>1?'s':''} to review. Each one stays here until you mark it reviewed.`:'When an agent finishes a run, its result lands here for review.')+
-      (list.length?`<div class="ag-stack">${list.map(r=>runCard(r)).join('')}</div>`:`<div class="ag-empty ag-card"><p>Nothing waiting.</p><button type="button" class="ag-primary" data-go="${db.agents.length?'agents':'templates'}">${db.agents.length?'Run one of your agents':'Start from a template'}</button></div>`);
+      (list.length?`${list.length>1?'<div class="ag-bulk"><button type="button" data-act="reviewall">Mark all reviewed</button></div>':''}<div class="ag-stack">${list.map(r=>runCard(r)).join('')}</div>`:`<div class="ag-empty ag-card"><p>Nothing waiting.</p><button type="button" class="ag-primary" data-go="${db.agents.length?'agents':'templates'}">${db.agents.length?'Run one of your agents':'Start from a template'}</button></div>`);
   }
   function vAgents(){
     return header('MY AGENTS',accent('Your','agents.'),'Each agent is a set of instructions that runs on your own ChatGPT or Claude key.')+
@@ -121,7 +122,7 @@
     const runs=db.runs.filter(r=>r.agentId===a.id&&r.status!=='running'),live=running?.agentId===a.id;
     return `<header class="ag-head ag-agent-head">${avatar(a,'lg')}<div><div class="ag-eyebrow">AGENT${a.useWorkspace?' · READS WORKSPACE':''}${a.saveToWorkspace?' · SAVES TO WORKSPACE':''}</div><h1 tabindex="-1">${esc(a.name)}</h1><p class="ag-lede">${esc(a.description)}</p></div><div class="ag-actions"><button type="button" data-edit="${a.id}">Edit</button><button type="button" data-duplicate="${a.id}">Duplicate</button><button type="button" class="ag-danger" data-delete="${a.id}">Delete</button></div></header>
       ${live?`<section class="ag-card ag-now"><div class="ag-now-top"><div class="ag-eyebrow"><i class="ag-dot"></i> HAPPENING NOW</div><span id="ag-timer" class="ag-timer">${clock(Date.now()-running.started)}</span><button type="button" data-act="cancel">Cancel</button></div><div class="ag-bar"><i></i></div><div class="ag-eyebrow" id="ag-phase" aria-live="polite">${running.answer?'WRITING IT UP…':'THINKING IT THROUGH…'}</div><p class="ag-query">${esc(running.request||a.starter||'Usual run')}</p><div id="ag-stream" class="ag-md ag-stream">${md(running.answer||'')}</div></section>`:''}
-      ${(()=>{const p=db.runs.find(r=>r.id===follows[a.id]&&r.status==='done');return p?`<p class="ag-follow">Following up on “${esc(p.title)}”. The earlier request and result go with your message.<button type="button" data-unfollow="${a.id}">Start fresh</button></p>`:'';})()}<form class="ag-prompt ag-card" data-run="${a.id}"><label class="sr-only" for="ag-request">Ask for a run</label><textarea id="ag-request" name="request" rows="2" maxlength="5000" placeholder="Ask for a run…" aria-keyshortcuts="Control+Enter Meta+Enter">${esc(drafts[a.id]??a.starter??'')}</textarea><div class="ag-prompt-bar"><span class="ag-model">${running&&!live?`${esc(agentById(running.agentId)?.name||'Another agent')} is running. One run at a time.`:esc(pick().label)}</span><span class="ag-run-group"><kbd class="ag-hint" aria-hidden="true">${/Mac|iP/.test(navigator.platform)?'⌘':'Ctrl'}+Enter</kbd><button type="submit" id="ag-run" class="ag-primary"${running?' aria-disabled="true"':''}>${running?'Running…':'Run it ↗'}</button></span></div></form>
+      ${(()=>{const p=db.runs.find(r=>r.id===follows[a.id]&&r.status==='done');return p?`<p class="ag-follow">Following up on “${esc(p.title)}”. The earlier request and result go with your message.<button type="button" data-unfollow="${a.id}">Start fresh</button></p>`:'';})()}<form class="ag-prompt ag-card" data-run="${a.id}"><label class="sr-only" for="ag-request">Ask for a run</label><textarea id="ag-request" name="request" rows="2" maxlength="5000" placeholder="Ask for a run…" aria-keyshortcuts="Control+Enter Meta+Enter"${a.useWorkspace?' aria-describedby="ag-reads"':''}>${esc(drafts[a.id]??a.starter??'')}</textarea>${a.useWorkspace?reads():''}<div class="ag-prompt-bar"><span class="ag-model">${running&&!live?`${esc(agentById(running.agentId)?.name||'Another agent')} is running. One run at a time.`:esc(pick().label)}</span><span class="ag-run-group"><kbd class="ag-hint" aria-hidden="true">${/Mac|iP/.test(navigator.platform)?'⌘':'Ctrl'}+Enter</kbd><button type="submit" id="ag-run" class="ag-primary"${running?' aria-disabled="true"':''}>${running?'Running…':'Run it ↗'}</button></span></div></form>
       <section><div class="ag-eyebrow ag-section" role="heading" aria-level="2">PREVIOUS RUNS · ${runs.length}</div>${runs.length?`<div class="ag-stack">${runs.map(r=>r.status==='done'?runCard(r,{agent:false,level:3}):`<article class="ag-card ag-result ag-failed"><div class="ag-eyebrow" role="heading" aria-level="3">${esc(ago(r.time))} · ${r.status==='cancelled'?'CANCELLED':'DID NOT FINISH'}</div><p>${esc(r.error)}</p>${r.answer?`<details><summary>Partial output</summary><div class="ag-md">${md(r.answer)}</div></details>`:''}<p class="ag-query">${esc(r.request)}</p><div class="ag-actions">${again(r)}<button type="button" class="ag-danger" data-drop="${r.id}" aria-label="Delete the run from ${esc(ago(r.time))}">Delete</button></div></article>`).join('')}</div>`:'<p class="ag-note">No runs yet. Ask for one above.</p>'}</section>`;
   }
   function preview(){
@@ -190,6 +191,7 @@
     const q=w.questions[w.qi];w.answers=w.answers.filter(a=>a.question!==q.question).concat(text?[{question:q.question,answer:text}]:[]);
     if(w.qi<w.questions.length-1){w.qi++;saveDraft();draw();root.querySelector('[data-answer]')?.focus();}else{w.redraft=true;saveDraft();toIdentity();}
   }
+  const reads=()=>{const c=workspaceContext(),n=c.objects.length,chars=c.goal.length+c.objects.reduce((t,o)=>t+o.title.length+o.body.length,0);return `<p class="ag-reads" id="ag-reads">${n?`Reads ${n} workspace object${n===1?'':'s'} (${chars<1000?chars+' characters':'~'+Math.round(chars/1000)+'k characters'}) with each run.`:'Workspace reading is on, but the workspace is empty.'}</p>`;};
   function workspaceContext(){
     let budget=280000;const objects=[];
     for(const o of current().slice(0,200)){const body=String(o.body||'').slice(0,Math.min(30000,budget));budget-=body.length;objects.push({type:o.type,title:String(o.title||'').slice(0,500),body,state:o.state});if(budget<=0)break;}
@@ -231,7 +233,7 @@
     if(d.review){const r=db.runs.find(r=>r.id===d.review);if(r){r.reviewed=true;persist();draw();refocus(r.id);toast('Marked reviewed.');}return;}
     if(d.copy){const r=db.runs.find(r=>r.id===d.copy);navigator.clipboard?.writeText(`# ${r.title}\n\n${r.answer}`).then(()=>toast('Copied to the clipboard.'),()=>toast('The browser blocked clipboard access.'));return;}
     if(d.keep){const r=db.runs.find(r=>r.id===d.keep);if(r){keep(r);persist();draw();refocus(r.id);toast('Added to your workspace as an artifact.');}return;}
-    if(d.delete){const a=agentById(d.delete),n=db.runs.filter(r=>r.agentId===a.id).length;if(!confirm(`Delete “${a.name}” and its ${n} result${n===1?'':'s'}? Results already saved to the workspace stay there.`))return;db.agents=db.agents.filter(x=>x.id!==a.id);db.runs=db.runs.filter(r=>r.agentId!==a.id);persist();go('agents');return toast('Agent deleted.');}
+    if(d.delete){const a=agentById(d.delete),n=db.runs.filter(r=>r.agentId===a.id).length;if(!confirm(`Delete “${a.name}” and its ${n} result${n===1?'':'s'}? Results already saved to the workspace stay there.`))return;db.agents=db.agents.filter(x=>x.id!==a.id);delete drafts[a.id];db.runs=db.runs.filter(r=>r.agentId!==a.id);persist();go('agents');return toast('Agent deleted.');}
     if(d.download){const r=db.runs.find(r=>r.id===d.download);download(`${r.title.toLowerCase().replace(/[^\p{L}\p{N}]+/gu,'-').replace(/^-|-$/g,'').slice(0,60)||'result'}.md`,`# ${r.title}\n\n${r.answer}\n`,'text/markdown');return toast('Downloaded as Markdown.');}
     if(d.drop){const r=db.runs.find(r=>r.id===d.drop);if(!r||r.status==='done'&&!confirm(`Delete “${r.title}”? A copy already saved to the workspace stays there.`))return;db.runs.splice(db.runs.indexOf(r),1);persist();draw();(root.querySelector(view==='agent'?'#ag-request':'[data-review]')||root.querySelector('h1'))?.focus();return toast('Run deleted.');}
     if(d.rerun){const r=db.runs.find(r=>r.id===d.rerun);return r&&run(agentById(r.agentId),r.request||'',r.parentId);}
@@ -245,9 +247,10 @@
       case 'workspace':return setMode('workspace');
       case 'keys':return $('#connections').click();
       case 'cancel':return running?.ctrl.abort();
-      case 'wipe':if(confirm('Delete every agent, result and draft stored in this browser? Workspace objects are not affected.')){db={agents:[],runs:[],draft:null};w=null;persist();go('agents');toast('All agents and results deleted.');}return;
+      case 'wipe':if(confirm('Delete every agent, result and draft stored in this browser? Workspace objects are not affected.')){db={agents:[],runs:[],draft:null,drafts:{}};drafts=db.drafts;w=null;persist();go('agents');toast('All agents and results deleted.');}return;
       case 'export':{download('nous-agents.json',JSON.stringify({nous:'agents',version:1,agents:db.agents},null,2),'application/json');toast(`Exported ${db.agents.length} agent${db.agents.length===1?'':'s'}. Results and keys are not included.`);return;}
       case 'import':return root.querySelector('#ag-import')?.click();
+      case 'reviewall':{const n=unreviewed().length;for(const r of unreviewed())r.reviewed=true;persist();draw();focusHead();return toast(`Marked ${n} result${n===1?'':'s'} reviewed.`);}
       case 'exit':saveDraft();toast(w.editingId?'Changes kept as a draft.':'Draft saved. Pick it up from New agent.');return go(w.editingId?'agent':'agents',w.editingId||openId);
       case 'prev':if(w.step===1&&w.qi>0)w.qi--;else if(w.step===2&&w.questions.length&&!w.editingId){w.step=1;w.qi=w.questions.length-1;}else w.step=Math.max(0,w.step===2&&!w.questions.length?0:w.step-1);saveDraft();draw();return focusHead();
       case 'skip':w.redraft=true;return toIdentity();
@@ -262,18 +265,18 @@
       }
     }
   });
-  root.addEventListener('input',e=>{if(e.target.id==='ag-request'&&openId)drafts[openId]=e.target.value;const f=e.target.dataset.field;if(f&&w){w[f]=e.target.value;saveDraft();if(f==='goal'&&e.target.value.trim()){e.target.removeAttribute('aria-invalid');root.querySelector('#ag-goal-err')?.setAttribute('hidden','');}const p=root.querySelector('#ag-preview');if(p)p.innerHTML=preview();}});
+  root.addEventListener('input',e=>{if(e.target.id==='ag-request'&&openId){drafts[openId]=e.target.value;clearTimeout(draftTimer);draftTimer=setTimeout(persist,400);}const f=e.target.dataset.field;if(f&&w){w[f]=e.target.value;saveDraft();if(f==='goal'&&e.target.value.trim()){e.target.removeAttribute('aria-invalid');root.querySelector('#ag-goal-err')?.setAttribute('hidden','');}const p=root.querySelector('#ag-preview');if(p)p.innerHTML=preview();}});
   root.addEventListener('change',e=>{
     const t=e.target;
     if(t.dataset.toggle&&w){w[t.dataset.toggle]=t.checked;saveDraft();root.querySelector('#ag-preview').innerHTML=preview();}
     // Imports agents only: results stay in the browser that made them, and an agent already here (same id) is left as it is.
-    if(t.id==='ag-import'&&t.files[0])t.files[0].text().then(text=>{const list=JSON.parse(text)?.agents;if(!Array.isArray(list))throw 0;const str=v=>typeof v==='string'?v.trim():'';let added=0;for(const x of list){if(!str(x?.name)||!str(x?.instructions)||db.agents.some(a=>a.id===x.id))continue;const now=new Date().toISOString();db.agents.push({id:str(x.id)||crypto.randomUUID(),created:str(x.created)||now,name:str(x.name),description:str(x.description),instructions:str(x.instructions),starter:str(x.starter),goal:str(x.goal),answers:Array.isArray(x.answers)?x.answers.filter(q=>typeof q?.question==='string'&&typeof q?.answer==='string'):[],useWorkspace:!!x.useWorkspace,saveToWorkspace:!!x.saveToWorkspace,updated:str(x.updated)||now});added++;}persist();draw();toast(added?`Imported ${added} agent${added===1?'':'s'}.`:'No new agents in that file.');}).catch(()=>toast('That file is not a Nous agents export.')).finally(()=>{t.value='';});
-    if(t.dataset.mirror){const real=$('#'+t.dataset.mirror);real.value=t.value;real.dispatchEvent(new Event('change'));real.onchange?.();setTimeout(draw,t.dataset.mirror==='ai-provider'?1500:0);}
+    if(t.id==='ag-import'&&t.files[0])t.files[0].text().then(text=>{const list=JSON.parse(text)?.agents;if(!Array.isArray(list))throw 0;const str=v=>typeof v==='string'?v.trim():'';let added=0,updated=0;for(const x of list){if(!str(x?.name)||!str(x?.instructions))continue;const now=new Date().toISOString(),old=db.agents.find(a=>a.id===str(x.id));if(old)updated++;else added++;const fields={name:str(x.name),description:str(x.description),instructions:str(x.instructions),starter:str(x.starter),goal:str(x.goal),answers:Array.isArray(x.answers)?x.answers.filter(q=>typeof q?.question==='string'&&typeof q?.answer==='string'):[],useWorkspace:!!x.useWorkspace,saveToWorkspace:!!x.saveToWorkspace,updated:str(x.updated)||now};if(old)Object.assign(old,fields);else db.agents.push({id:str(x.id)||crypto.randomUUID(),created:str(x.created)||now,...fields});}persist();draw();const n=k=>`${k} agent${k===1?'':'s'}`;toast(added||updated?[added&&`Added ${n(added)}`,updated&&`updated ${n(updated)}`].filter(Boolean).join(', ').replace(/^u/,'U')+'.':'No agents in that file.');}).catch(()=>toast('That file is not a Nous agents export.')).finally(()=>{t.value='';});
+    if(t.dataset.mirror){const real=$('#'+t.dataset.mirror);real.value=t.value;real.dispatchEvent(new Event('change'));real.onchange?.();draw();root.querySelector(`[data-mirror="${t.dataset.mirror}"]`)?.focus();}
   });
   root.addEventListener('submit',e=>{
     e.preventDefault();const f=e.target;
     if(f.dataset.own!==undefined){const v=f.elements.own.value.trim();if(v)answer(v);else f.elements.own.focus();}
-    if(f.dataset.run&&!running){const a=agentById(f.dataset.run),p=follows[a.id];delete follows[a.id];run(a,f.elements.request.value.trim(),p);}else if(f.dataset.run)toast('One run at a time. Wait for the current run or cancel it.');
+    if(f.dataset.run&&!running){const a=agentById(f.dataset.run),p=follows[a.id];delete follows[a.id];delete drafts[a.id];run(a,f.elements.request.value.trim(),p);}else if(f.dataset.run)toast('One run at a time. Wait for the current run or cancel it.');
   });
   // Ctrl/Cmd+Enter runs from the request box.
   root.addEventListener('keydown',e=>{if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)&&e.target.id==='ag-request'){e.preventDefault();e.target.form.requestSubmit();}});
@@ -289,5 +292,5 @@
   let mode='agents';try{mode=localStorage.getItem(MODE)||'agents';}catch{}
   const start=parseRoute();if(start){view=start.view;openId=start.id;mode='agents';}
   setMode(mode==='workspace'?'workspace':'agents',false);
-  setTimeout(()=>{if(document.body.classList.contains('mode-agents')&&!['wizard'].includes(view)&&!running)draw();},2500);
+  const models=$('#ai-model');if(models)new MutationObserver(()=>{if(!document.body.classList.contains('mode-agents')||view==='wizard'||running)return;const m=document.activeElement?.dataset?.mirror;draw();if(m)root.querySelector(`[data-mirror="${m}"]`)?.focus();}).observe(models,{childList:true,subtree:true,attributes:true,attributeFilter:['disabled']});
 })();
