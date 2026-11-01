@@ -1,19 +1,21 @@
-// Styles: light plus three dark palettes. Loaded in <head> so the style is set
-// before first paint. A style picked in the menu is saved per device; without
-// one (or after picking System), the system setting decides (light or Warm ink)
-// and is followed live.
+// Styles: Light and Warm ink. Loaded in <head> so the style is set before
+// first paint. The choice in the menu is saved per device; without one the
+// style is Light. Picking System follows the system setting live.
 (()=>{
   const KEY='nous-theme',root=document.documentElement,system=matchMedia('(prefers-color-scheme: dark)'),still=matchMedia('(prefers-reduced-motion: reduce)');
-  const THEMES={light:'Light',graphite:'Graphite',forest:'Forest',warm:'Warm ink'},DARK_DEFAULT='warm';
-  // 'dark' was saved by the single dark mode that Warm ink replaced.
-  const saved=()=>{try{const v=localStorage.getItem(KEY);return v==='dark'?DARK_DEFAULT:v in THEMES?v:null}catch{return null}};
-  const fromSystem=()=>system.matches?DARK_DEFAULT:'light';
+  const THEMES={light:'Light',warm:'Warm ink'},DARK='warm';
+  // 'dark' was saved by the first dark mode; Graphite and Forest were removed.
+  // Each now opens in Warm ink.
+  const LEGACY_DARK=['dark','graphite','forest'];
+  const choice=()=>{try{const v=localStorage.getItem(KEY);return LEGACY_DARK.includes(v)?DARK:v==='system'||v in THEMES?v:'light'}catch{return 'light'}};
+  const fromSystem=()=>system.matches?DARK:'light';
+  const resolve=c=>c==='system'?fromSystem():c;
   const apply=theme=>{
     root.dataset.theme=theme;
     if(theme==='light')delete root.dataset.mode;else root.dataset.mode='dark';
-    const choice=saved()||'system';
-    const b=document.getElementById('theme-button');if(b){b.setAttribute('aria-label',`Style: ${choice==='system'?`System (${THEMES[theme]})`:THEMES[theme]}`);b.title=b.getAttribute('aria-label')}
-    document.querySelectorAll('[data-theme-option]').forEach(o=>o.setAttribute('aria-pressed',String(o.dataset.themeOption===choice)));
+    const c=choice();
+    const b=document.getElementById('theme-button');if(b){b.setAttribute('aria-label',`Style: ${c==='system'?`System (${THEMES[theme]})`:THEMES[theme]}`);b.title=b.getAttribute('aria-label')}
+    document.querySelectorAll('[data-theme-option]').forEach(o=>o.setAttribute('aria-pressed',String(o.dataset.themeOption===c)));
   };
   // Reveal the new style in a circle growing from (x,y); fade colours where
   // View Transitions are unavailable; switch instantly under reduced motion.
@@ -29,8 +31,8 @@
     root.classList.add('theme-fading');run();
     clearTimeout(switchTo.timer);switchTo.timer=setTimeout(()=>root.classList.remove('theme-fading'),500);
   };
-  apply(saved()||fromSystem());
-  system.addEventListener('change',()=>{if(!saved())switchTo(fromSystem(),innerWidth/2,0)});
+  apply(resolve(choice()));
+  system.addEventListener('change',()=>{if(choice()==='system')switchTo(fromSystem(),innerWidth/2,0)});
   document.addEventListener('DOMContentLoaded',()=>{
     const button=document.getElementById('theme-button'),menu=document.getElementById('theme-menu');if(!button||!menu)return;
     apply(root.dataset.theme);
@@ -43,9 +45,8 @@
     menu.addEventListener('click',e=>{
       const o=e.target.closest('[data-theme-option]');if(!o)return;
       const option=o.dataset.themeOption,box=o.querySelector('.theme-swatch').getBoundingClientRect();
-      try{option==='system'?localStorage.removeItem(KEY):localStorage.setItem(KEY,option)}catch{}
-      const theme=option==='system'?fromSystem():option;
-      switchTo(theme,box.left+box.width/2,box.top+box.height/2,()=>close(false));
+      try{localStorage.setItem(KEY,option)}catch{}
+      switchTo(resolve(option),box.left+box.width/2,box.top+box.height/2,()=>close(false));
       button.focus();
     });
     menu.addEventListener('keydown',e=>{
