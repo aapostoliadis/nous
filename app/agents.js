@@ -25,11 +25,12 @@
     {topic:'DEPTH',question:'How much detail should it go into?',options:['The headline and three key points','A balanced overview','Thorough, with reasoning and caveats']}
   ];
   if(!db.drafts||typeof db.drafts!=='object'||Array.isArray(db.drafts))db.drafts={};
-  let view='agents',openId=null,running=null,ticker=null,loading='',w=db.draft,drafts=db.drafts,follows={},draftTimer=null;
+  let view='agents',openId=null,running=null,ticker=null,loading='',w=db.draft,drafts=db.drafts,follows={},draftTimer=null,find='',order='new';
   if(db.runs.some(r=>r.status==='done'&&!r.reviewed))view='ready';
   const agentById=id=>db.agents.find(a=>a.id===id);
-  // Deletes apply at once and the toast offers Undo while it shows, instead of a confirm dialog before.
-  const undoable=(msg,restore)=>{toast(msg);const b=document.createElement('button');b.type='button';b.textContent='Undo';b.onclick=()=>{b.remove();restore();persist();toast('Restored.');};document.getElementById('toast').append(' ',b);};
+  // Deletes apply at once and the toast offers Undo for 8 seconds, held while the button is hovered or focused, instead of a confirm dialog before.
+  const undoable=(msg,restore)=>{toast(msg);const t=document.getElementById('toast'),b=document.createElement('button'),hold=()=>clearTimeout(toastTimer),later=()=>{hold();toastTimer=setTimeout(()=>t.classList.remove('show'),8000);};
+    b.type='button';b.textContent='Undo';b.setAttribute('aria-keyshortcuts','Control+Z Meta+Z');b.onmouseenter=b.onfocus=hold;b.onmouseleave=b.onblur=later;b.onclick=()=>{b.onblur=null;b.remove();restore();persist();toast('Restored.');};t.append(' ',b);later();};
   const unreviewed=()=>db.runs.filter(r=>r.status==='done'&&!r.reviewed);
   // Keeps history to 100 runs by dropping the oldest ones that need nothing; a result still waiting for review is never dropped.
   const trimRuns=()=>{let over=db.runs.length-100;for(let i=db.runs.length-1;i>=0&&over>0;i--)if(!(db.runs[i].status==='done'&&!db.runs[i].reviewed)){db.runs.splice(i,1);over--;}};
@@ -97,9 +98,23 @@
     return header('READY FOR YOU',list.length?accent('Fresh results,','waiting for you.'):accent('All','caught up.'),list.length?`${list.length} result${list.length>1?'s':''} to review. Each one stays here until you mark it reviewed.`:'When an agent finishes a run, its result lands here for review.')+
       (list.length?`${list.length>1?'<div class="ag-bulk"><button type="button" data-act="reviewall">Mark all reviewed</button></div>':''}<div class="ag-stack">${list.map(r=>runCard(r)).join('')}</div>`:`<div class="ag-empty ag-card"><p>Nothing waiting.</p><button type="button" class="ag-primary" data-go="${db.agents.length?'agents':'templates'}">${db.agents.length?'Run one of your agents':'Start from a template'}</button></div>`);
   }
+  // From 6 agents the list gets a search box and a sort; runs are stored newest first, so an agent's first run is its last use.
+  const lastUsed=a=>db.runs.find(r=>r.agentId===a.id)?.time||'';
+  const filter=()=>{const q=db.agents.length>=6?find.trim().toLowerCase():'';let n=0;for(const c of root.querySelectorAll('.ag-grid [data-q]')){c.hidden=!!q&&!c.dataset.q.includes(q);n+=!c.hidden;}const s=root.querySelector('#ag-found');if(s)s.textContent=q?(n?`${n} of ${db.agents.length} agents match.`:`No agents match “${find.trim()}”.`):'';};
+  const LIMIT_NOTE='Close to the limit: a run stops at 1:35. Wait, or cancel and ask for less.';
+  // Browsers keep about 5 MB per site, counted in characters; the workspace shares it with the agents.
+  const MONTH=30*864e5,old=()=>db.runs.filter(r=>r.status!=='running'&&!(r.status==='done'&&!r.reviewed)&&Date.now()-new Date(r.time)>MONTH);
+  function storage(){
+    let all=0,mine=0;try{for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i),n=k.length+(localStorage.getItem(k)||'').length;all+=n;if(k===KEY)mine+=n;}}catch{}
+    const mb=n=>n<1e5?Math.max(1,Math.round(n/1e3))+' KB':(n/1e6).toFixed(1)+' MB',n=old().length;
+    return `<section class="ag-card ag-settings"><h2>Storage</h2><p>Nous uses ${mb(all)} of about 5 MB this browser keeps for it. Agents and results take ${mb(mine)} of that.</p><meter min="0" max="5000000" low="3500000" high="4500000" optimum="0" value="${all}" aria-label="Browser storage used">${Math.round(all/5e4)}%</meter>
+      <div class="ag-actions"><button type="button" data-act="prune"${n?'':' aria-disabled="true"'}>Delete results older than 30 days${n?` (${n})`:''}</button><span class="ag-model">${n?'Results waiting for review are kept.':'No reviewed or failed results older than 30 days.'}</span></div></section>`;
+  }
   function vAgents(){
+    const tools=db.agents.length>=6,list=!tools||order==='new'?db.agents:[...db.agents].sort(order==='name'?(a,b)=>a.name.localeCompare(b.name):(a,b)=>lastUsed(b).localeCompare(lastUsed(a)));
     return header('MY AGENTS',accent('Your','agents.'),'Each agent is a set of instructions that runs on your own ChatGPT or Claude key.')+
-      `<div class="ag-grid">${db.agents.map(a=>{const last=db.runs.find(r=>r.agentId===a.id);return `<article class="ag-card ag-agent"><button type="button" class="ag-cover" data-open="${a.id}" aria-label="Open ${esc(a.name)}"></button>${avatar(a)}<h2>${esc(a.name)}</h2><p>${esc(a.description)}</p><div class="ag-meta">${a.useWorkspace?'<span class="ag-tag">Workspace</span>':''}${running?.agentId===a.id?`<span class="ag-tag">RUNNING · <span data-clock>${clock(Date.now()-running.started)}</span></span>`:`<span>${last?'Last run '+esc(ago(last.time)):'Not run yet'}</span>`}</div><div class="ag-actions"><button type="button" class="ag-primary" data-open="${a.id}" aria-label="Run ${esc(a.name)}">Run ↗</button><button type="button" data-edit="${a.id}" aria-label="Edit ${esc(a.name)}">Edit</button><button type="button" data-duplicate="${a.id}" aria-label="Duplicate ${esc(a.name)}">Duplicate</button></div></article>`;}).join('')}
+      (tools?`<div class="ag-tools" role="search"><label class="sr-only" for="ag-find">Search agents</label><input type="search" id="ag-find" class="ag-input" placeholder="Search by name or description" value="${esc(find)}"><label class="ag-sort">Sort<select id="ag-sort" class="ag-input">${[['new','Newest first'],['used','Last used'],['name','Name']].map(([v,l])=>`<option value="${v}"${order===v?' selected':''}>${l}</option>`).join('')}</select></label><p class="ag-note" id="ag-found" aria-live="polite"></p></div>`:'')+
+      `<div class="ag-grid">${list.map(a=>{const last=db.runs.find(r=>r.agentId===a.id);return `<article class="ag-card ag-agent" data-q="${esc((a.name+' '+a.description).toLowerCase())}"><button type="button" class="ag-cover" data-open="${a.id}" aria-label="Open ${esc(a.name)}"></button>${avatar(a)}<h2>${esc(a.name)}</h2><p>${esc(a.description)}</p><div class="ag-meta">${a.useWorkspace?'<span class="ag-tag">Workspace</span>':''}${running?.agentId===a.id?`<span class="ag-tag">RUNNING · <span data-clock>${clock(Date.now()-running.started)}</span></span>`:`<span>${last?'Last run '+esc(ago(last.time)):'Not run yet'}</span>`}</div><div class="ag-actions"><button type="button" class="ag-primary" data-open="${a.id}" aria-label="Run ${esc(a.name)}">Run ↗</button><button type="button" data-edit="${a.id}" aria-label="Edit ${esc(a.name)}">Edit</button><button type="button" data-duplicate="${a.id}" aria-label="Duplicate ${esc(a.name)}">Duplicate</button></div></article>`;}).join('')}
       <button type="button" class="ag-card ag-add" data-act="new"><span>＋</span>Add an agent<small>Describe it, answer a few questions, done.</small></button></div>`;
   }
   function vTemplates(){
@@ -117,13 +132,13 @@
         <div class="ag-actions ag-styles" role="group" aria-label="Style">${[...document.querySelectorAll('#theme-menu [data-theme-option]')].map(o=>o.outerHTML).join('')}</div></section>
       <section class="ag-card ag-settings"><h2>What agents can do</h2><p>Agents write: briefs, plans, critiques, drafts and summaries, from your request and, if you allow it, your workspace. They cannot browse the web, search, send email or act in other apps, and they say so rather than pretend.</p>
         <p>Agents and results are stored only in this browser. Each run sends the agent's instructions, your request and any workspace context to the provider you chose.</p>
-        <div class="ag-actions"><button type="button" data-act="export"${db.agents.length?'':' disabled'}>Export agents</button><button type="button" data-act="import">Import agents</button><input type="file" id="ag-import" accept="application/json,.json" hidden aria-label="Agents file to import"><button type="button" class="ag-danger" data-act="wipe">Delete all agents and results</button></div></section>`;
+        <div class="ag-actions"><button type="button" data-act="export"${db.agents.length?'':' disabled'}>Export agents</button><button type="button" data-act="import">Import agents</button><input type="file" id="ag-import" accept="application/json,.json" hidden aria-label="Agents file to import"><button type="button" class="ag-danger" data-act="wipe">Delete all agents and results</button></div></section>${storage()}`;
   }
   function vAgent(){
     const a=agentById(openId);if(!a){view='agents';return vAgents();}
     const runs=db.runs.filter(r=>r.agentId===a.id&&r.status!=='running'),live=running?.agentId===a.id;
     return `<header class="ag-head ag-agent-head">${avatar(a,'lg')}<div><div class="ag-eyebrow">AGENT${a.useWorkspace?' · READS WORKSPACE':''}${a.saveToWorkspace?' · SAVES TO WORKSPACE':''}</div><h1 tabindex="-1">${esc(a.name)}</h1><p class="ag-lede">${esc(a.description)}</p></div><div class="ag-actions"><button type="button" data-edit="${a.id}">Edit</button><button type="button" data-duplicate="${a.id}">Duplicate</button><button type="button" class="ag-danger" data-delete="${a.id}">Delete</button></div></header>
-      ${live?`<section class="ag-card ag-now"><div class="ag-now-top"><div class="ag-eyebrow"><i class="ag-dot"></i> HAPPENING NOW</div><span id="ag-timer" class="ag-timer">${clock(Date.now()-running.started)}</span><button type="button" data-act="cancel">Cancel</button></div><div class="ag-bar"><i></i></div><div class="ag-eyebrow" id="ag-phase" aria-live="polite">${running.answer?'WRITING IT UP…':'THINKING IT THROUGH…'}</div><p class="ag-query">${esc(running.request||a.starter||'Usual run')}</p><div id="ag-stream" class="ag-md ag-stream">${md(running.answer||'')}</div></section>`:''}
+      ${live?`<section class="ag-card ag-now" aria-busy="true"><div class="ag-now-top"><div class="ag-eyebrow"><i class="ag-dot"></i> HAPPENING NOW</div><span id="ag-timer" class="ag-timer">${clock(Date.now()-running.started)}</span><button type="button" data-act="cancel">Cancel</button></div><div class="ag-bar"><i></i></div><div class="ag-eyebrow" id="ag-phase" aria-live="polite">${running.answer?'WRITING IT UP…':'THINKING IT THROUGH…'}</div><p class="ag-note ag-limit" id="ag-limit" aria-live="polite">${Date.now()-running.started>=60000?LIMIT_NOTE:''}</p><p class="ag-query">${esc(running.request||a.starter||'Usual run')}</p><div id="ag-stream" class="ag-md ag-stream">${md(running.answer||'')}</div></section>`:''}
       ${(()=>{const p=db.runs.find(r=>r.id===follows[a.id]&&r.status==='done');return p?`<p class="ag-follow">Following up on “${esc(p.title)}”. The earlier request and result go with your message.<button type="button" data-unfollow="${a.id}">Start fresh</button></p>`:'';})()}<form class="ag-prompt ag-card" data-run="${a.id}"><label class="sr-only" for="ag-request">Ask for a run</label><textarea id="ag-request" name="request" rows="2" maxlength="5000" placeholder="Ask for a run…" aria-keyshortcuts="Control+Enter Meta+Enter"${a.useWorkspace?' aria-describedby="ag-reads"':''}>${esc(drafts[a.id]??a.starter??'')}</textarea>${a.useWorkspace?reads():''}<div class="ag-prompt-bar"><span class="ag-model">${running&&!live?`${esc(agentById(running.agentId)?.name||'Another agent')} is running. One run at a time.`:esc(pick().label)}</span><span class="ag-run-group"><kbd class="ag-hint" aria-hidden="true">${/Mac|iP/.test(navigator.platform)?'⌘':'Ctrl'}+Enter</kbd><button type="submit" id="ag-run" class="ag-primary"${running?' aria-disabled="true"':''}>${running?'Running…':'Run it ↗'}</button></span></div></form>
       <section><div class="ag-eyebrow ag-section" role="heading" aria-level="2">PREVIOUS RUNS · ${runs.length}</div>${runs.length?`<div class="ag-stack">${runs.map(r=>r.status==='done'?runCard(r,{agent:false,level:3}):`<article class="ag-card ag-result ag-failed"><div class="ag-eyebrow" role="heading" aria-level="3">${esc(ago(r.time))} · ${r.status==='cancelled'?'CANCELLED':'DID NOT FINISH'}</div><p>${esc(r.error)}</p>${r.answer?`<details><summary>Partial output</summary><div class="ag-md">${md(r.answer)}</div></details>`:''}<p class="ag-query">${esc(r.request)}</p><div class="ag-actions">${again(r)}<button type="button" class="ag-danger" data-drop="${r.id}" aria-label="Delete the run from ${esc(ago(r.time))}">Delete</button></div></article>`).join('')}</div>`:'<p class="ag-note">No runs yet. Ask for one above.</p>'}</section>`;
   }
@@ -158,6 +173,7 @@
     if(head)root.querySelector('.ag-main h1')?.focus({preventScroll:true});
     else if(el)((sel&&root.querySelector(sel))||root.querySelector('.ag-main'))?.focus({preventScroll:!sel});
     if(!document.body.classList.contains('mode-agents'))return;
+    if(view==='agents')filter();
     sync(false);const n=unreviewed().length;
     document.title=(view==='ready'?'Ready for you'+(n?` (${n})`:''):view==='templates'?'Templates':view==='settings'?'Settings':view==='wizard'?'New agent':view==='agent'?agentById(openId)?.name||'Agent':'My agents')+' · Nous';
   }
@@ -213,7 +229,7 @@
     if(!ok){toast(provider&&provider!=='local'&&window.providerReady?.(provider)?'Your key is saved, but no model is available. Choose one in Settings to run agents.':'Add your ChatGPT or Claude key and choose a model to run agents.');return go('settings');}
     const ctrl=new AbortController();running={agentId:a.id,request,started:Date.now(),answer:'',ctrl};go('agent',a.id);
     let timedOut=false;const timeout=setTimeout(()=>{timedOut=true;ctrl.abort();},95000);
-    ticker=setInterval(()=>{for(const t of root.querySelectorAll('#ag-timer,[data-clock]'))t.textContent=clock(Date.now()-running.started);if(Date.now()-running.record.beat>=3000){running.record.beat=Date.now();persist();}},1000);
+    ticker=setInterval(()=>{for(const t of root.querySelectorAll('#ag-timer,[data-clock]'))t.textContent=clock(Date.now()-running.started);const lim=root.querySelector('#ag-limit');if(lim&&!lim.textContent&&Date.now()-running.started>=60000)lim.textContent=LIMIT_NOTE;if(Date.now()-running.record.beat>=3000){running.record.beat=Date.now();persist();}},1000);
     const record={id:crypto.randomUUID(),agentId:a.id,agentName:a.name,request,...(parentId&&{parentId}),time:new Date().toISOString(),status:'running',answer:'',beat:Date.now()};
     running.record=record;db.runs.unshift(record);trimRuns();persist();
     try{
@@ -253,6 +269,8 @@
       case 'workspace':return setMode('workspace');
       case 'keys':return $('#connections').click();
       case 'cancel':return running?.ctrl.abort();
+      case 'prune':{const gone=db.runs.map((r,j)=>[j,r]).filter(([,r])=>old().includes(r));if(!gone.length)return;db.runs=db.runs.filter(r=>!gone.some(([,g])=>g===r));persist();draw();
+        return undoable(`Deleted ${gone.length} result${gone.length===1?'':'s'} older than 30 days.`,()=>{for(const [j,r] of gone)db.runs.splice(Math.min(j,db.runs.length),0,r);draw();});}
       case 'wipe':if(confirm('Delete every agent, result and draft stored in this browser? Workspace objects are not affected.')){db={agents:[],runs:[],draft:null,drafts:{}};drafts=db.drafts;w=null;persist();go('agents');toast('All agents and results deleted.');}return;
       case 'export':{download('nous-agents.json',JSON.stringify({nous:'agents',version:1,agents:db.agents},null,2),'application/json');toast(`Exported ${db.agents.length} agent${db.agents.length===1?'':'s'}. Results and keys are not included.`);return;}
       case 'import':return root.querySelector('#ag-import')?.click();
@@ -271,12 +289,13 @@
       }
     }
   });
-  root.addEventListener('input',e=>{if(e.target.id==='ag-request'&&openId){drafts[openId]=e.target.value;clearTimeout(draftTimer);draftTimer=setTimeout(persist,400);}const f=e.target.dataset.field;if(f&&w){w[f]=e.target.value;saveDraft();if(f==='goal'&&e.target.value.trim()){e.target.removeAttribute('aria-invalid');root.querySelector('#ag-goal-err')?.setAttribute('hidden','');}const p=root.querySelector('#ag-preview');if(p)p.innerHTML=preview();}});
+  root.addEventListener('input',e=>{if(e.target.id==='ag-find'){find=e.target.value;return filter();}if(e.target.id==='ag-request'&&openId){drafts[openId]=e.target.value;clearTimeout(draftTimer);draftTimer=setTimeout(persist,400);}const f=e.target.dataset.field;if(f&&w){w[f]=e.target.value;saveDraft();if(f==='goal'&&e.target.value.trim()){e.target.removeAttribute('aria-invalid');root.querySelector('#ag-goal-err')?.setAttribute('hidden','');}const p=root.querySelector('#ag-preview');if(p)p.innerHTML=preview();}});
   root.addEventListener('change',e=>{
     const t=e.target;
     if(t.dataset.toggle&&w){w[t.dataset.toggle]=t.checked;saveDraft();root.querySelector('#ag-preview').innerHTML=preview();}
     // Imports agents only: results stay in the browser that made them, and an agent already here (same id) is left as it is.
     if(t.id==='ag-import'&&t.files[0])t.files[0].text().then(text=>{const list=JSON.parse(text)?.agents;if(!Array.isArray(list))throw 0;const str=v=>typeof v==='string'?v.trim():'';let added=0,updated=0;for(const x of list){if(!str(x?.name)||!str(x?.instructions))continue;const now=new Date().toISOString(),old=db.agents.find(a=>a.id===str(x.id));if(old)updated++;else added++;const fields={name:str(x.name),description:str(x.description),instructions:str(x.instructions),starter:str(x.starter),goal:str(x.goal),answers:Array.isArray(x.answers)?x.answers.filter(q=>typeof q?.question==='string'&&typeof q?.answer==='string'):[],useWorkspace:!!x.useWorkspace,saveToWorkspace:!!x.saveToWorkspace,updated:str(x.updated)||now};if(old)Object.assign(old,fields);else db.agents.push({id:str(x.id)||crypto.randomUUID(),created:str(x.created)||now,...fields});}persist();draw();const n=k=>`${k} agent${k===1?'':'s'}`;toast(added||updated?[added&&`Added ${n(added)}`,updated&&`updated ${n(updated)}`].filter(Boolean).join(', ').replace(/^u/,'U')+'.':'No agents in that file.');}).catch(()=>toast('That file is not a Nous agents export.')).finally(()=>{t.value='';});
+    if(t.id==='ag-sort'){order=t.value;return draw();}
     if(t.dataset.mirror){const real=$('#'+t.dataset.mirror);real.value=t.value;real.dispatchEvent(new Event('change'));real.onchange?.();draw();root.querySelector(`[data-mirror="${t.dataset.mirror}"]`)?.focus();}
   });
   root.addEventListener('submit',e=>{
@@ -286,6 +305,8 @@
   });
   // Ctrl/Cmd+Enter runs from the request box.
   root.addEventListener('keydown',e=>{if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)&&e.target.id==='ag-request'){e.preventDefault();e.target.form.requestSubmit();}});
+  // Ctrl/Cmd+Z presses Undo while the toast offers it; text fields keep their own undo.
+  document.addEventListener('keydown',e=>{if(e.key.toLowerCase()!=='z'||!(e.ctrlKey||e.metaKey)||e.shiftKey||e.altKey||e.defaultPrevented||!document.body.classList.contains('mode-agents')||e.target.closest?.('input,textarea,select,[contenteditable]'))return;const b=$('#toast.show button');if(b){e.preventDefault();b.click();}});
   // Escape leaves the wizard the same way its Exit button does; skipped when an open dialog or another handler has claimed the key.
   document.addEventListener('keydown',e=>{if(e.key!=='Escape'||e.defaultPrevented||view!=='wizard'||loading||document.querySelector('dialog[open]')||e.target.matches?.('select'))return;e.preventDefault();saveDraft();toast(w.editingId?'Changes kept as a draft.':'Draft saved. Pick it up from New agent.');go(w.editingId?'agent':'agents',w.editingId||openId);});
   const toggle=document.createElement('button');toggle.id='agents-toggle';toggle.type='button';toggle.className='agents-toggle';toggle.textContent='✦ Agents';toggle.onclick=()=>{setMode('agents');focusHead();};// the toggle goes inert, so focus would drop to body
