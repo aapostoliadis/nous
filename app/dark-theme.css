@@ -5,26 +5,14 @@
    compound values, and overrides whose removal would change the dark look.
    Base rules prefixed :where([data-mode=dark]) carry no specificity for the
    prefix, so the light :hover/.active/.claim rules (already tokenised) win.
-   theme.js sets data-theme (light, graphite, forest or warm) on <html>, plus
-   data-mode="dark" for the three dark styles, which share every rule below. */
-/* Shared by the three dark styles: status colours and aliases for the
-   variables the light stylesheets use. Each style below sets its surfaces. */
+   theme.js sets data-theme (light or warm) on <html>, plus data-mode="dark"
+   for Warm ink, which uses every rule below. */
+/* Shared by dark styles: status colours and aliases for the
+   variables the light stylesheets use. Each dark style sets its surfaces. */
 :root[data-mode=dark]{color-scheme:dark;
   --amber-bg:#33280f;--amber:#e6b85c;--green-bg:#16301f;--green:#7fd19f;--red-bg:#3a1a19;--red:#f09a92;--blue:#9bb7d6;--orange:#e39d73;--purple:#b9a6d8;
   --shadow:0 2px 4px #0000002e,0 10px 25px #00000038;
   --paper:var(--bg);--danger-bg:var(--red-bg);--danger-text:var(--red);--green-light:var(--accent-bg);--card-shadow:var(--shadow)}
-:root[data-theme=graphite]{
-  --bg:#111318;--surface:#171a20;--raised:#1d2027;--raised-2:#252932;--line:#2c313b;--line-strong:#3a404c;
-  --ink:#e8eaef;--muted:#a2a8b3;--subtle:#7d8390;
-  --accent:#86c4a4;--accent-strong:#a8dcc0;--accent-bg:#1c2b24;--accent-line:#2f4a3d;
-  --solid:#e8eaef;--on-solid:#111318;--solid-hover:#86c4a4;
-  --gray-bg:#262a31;--blue-bg:#1b2633;--dash:#5d6575}
-:root[data-theme=forest]{
-  --bg:#0e1512;--surface:#141d19;--raised:#1a2621;--raised-2:#22302a;--line:#26352e;--line-strong:#344a40;
-  --ink:#e4ece7;--muted:#9aaba1;--subtle:#7a8b82;
-  --accent:#8cc7a8;--accent-strong:#ade0c4;--accent-bg:#1a2c23;--accent-line:#2f4c3e;
-  --solid:#e4ece7;--on-solid:#0e1512;--solid-hover:#8cc7a8;
-  --gray-bg:#22302a;--blue-bg:#1a2833;--dash:#4f6a5c}
 :root[data-theme=warm]{
   --bg:#161512;--surface:#1d1c18;--raised:#25231e;--raised-2:#2e2b25;--line:#34312a;--line-strong:#454037;
   --ink:#ece8df;--muted:#aaa497;--subtle:#857f73;
@@ -148,7 +136,8 @@
 .theme-menu button:hover{background:var(--raised-2,#f1f3f5)}
 .theme-menu button[aria-pressed=true]{font-weight:600}
 .theme-menu button[aria-pressed=true]::after{content:"✓";margin-left:auto;color:var(--accent,#295b44)}
-.theme-swatch{width:22px;height:22px;flex:none;border-radius:50%;border:1px solid #0000002e;background:linear-gradient(135deg,var(--sw-bg) 50%,var(--sw-accent) 50%)}
+.theme-swatch{width:24px;height:24px;flex:none;display:grid;place-items:center;border-radius:7px;border:1px solid #0000002e;background:var(--sw-bg);color:var(--sw-accent)}
+.theme-swatch svg{width:15px;height:15px}
 [data-mode=dark] .theme-menu{border-color:var(--line-strong);color:var(--ink);box-shadow:0 16px 40px #00000080}
 
 /* Switching style: theme.js reveals the new one in a circle from the option
