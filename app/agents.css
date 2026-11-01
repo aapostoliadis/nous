@@ -10,6 +10,10 @@ body.mode-agents .agents-app{display:grid}
 }
 .agents-app button{font:inherit;color:inherit;cursor:pointer;transition:background-color .15s,border-color .15s,color .15s,box-shadow .15s}
 .agents-app :focus-visible{outline:2px solid var(--ag-accent);outline-offset:2px}
+.agents-app h1[tabindex="-1"]:focus{outline:none}
+.mode-agents #toast{z-index:50}
+#toast button{pointer-events:auto;margin-left:10px;padding:2px 8px;border:1px solid currentColor;border-radius:99px;background:none;color:inherit;font:inherit;font-weight:600;cursor:pointer}
+.ag-short{display:none}
 
 /* Top bar */
 .ag-side{display:flex;align-items:center;flex-wrap:wrap;gap:16px;padding:14px 28px;border-bottom:1px solid var(--ag-line);background:var(--ag-bg)}
@@ -172,11 +176,19 @@ body.mode-agents .agents-app{display:grid}
 @media (max-width:860px){
   .ag-side{padding:10px 16px;gap:8px 10px}
   .ag-side nav{order:5;flex:1 1 100%}
+  .ag-long{display:none}.ag-short{display:inline}
   .agents-app .ag-main{padding:24px 16px 60px}
   .ag-wiz-body{grid-template-columns:1fr}
   .ag-preview{position:static;order:-1}
   .ag-agent-head{flex-wrap:wrap}
   .ag-agent-head>.ag-actions{flex-basis:100%}
+}
+/* Phones: brand, New agent and Workspace share one row above the tabs. */
+@media (max-width:480px){
+  .ag-side{column-gap:8px}
+  .ag-brand{gap:8px;padding:0}
+  .ag-new{padding:10px 12px}
+  .ag-side-foot button{padding:9px 11px}
 }
 /* Touch: 44px targets, and 16px fields so iOS does not zoom on focus. */
 @media (pointer:coarse){

@@ -6,7 +6,7 @@
   if(!Array.isArray(db?.agents)||!Array.isArray(db?.runs))db={agents:[],runs:[],draft:null};
   // A run is stored as running from its first moment, so closing the tab mid-run still leaves a record. Its tab stamps a heartbeat every few seconds (zeroed on pagehide), so a fresh one means the run is still live in another tab.
   for(const r of db.runs)if(r.status==='running'&&!(Date.now()-r.beat<15000))Object.assign(r,{status:'error',error:'Interrupted: the page closed or reloaded before this run finished. Nothing was saved to your workspace.'});
-  let storageWarned=false;
+  let storageWarned=false;const BASE_TITLE=document.title;
   const persist=()=>{try{localStorage.setItem(KEY,JSON.stringify(db));storageWarned=false;}catch(e){if(storageWarned)return;storageWarned=true;toast(e?.name==='QuotaExceededError'?'Browser storage is full, so recent changes were not saved. Delete old runs or download the results you want to keep.':'This browser is blocking storage, so agents last for this session only.');}};
   const root=document.createElement('div');root.id='agents-app';root.className='agents-app';
   document.body.append(root);
@@ -28,6 +28,8 @@
   let view='agents',openId=null,running=null,ticker=null,loading='',w=db.draft,drafts=db.drafts,follows={},draftTimer=null;
   if(db.runs.some(r=>r.status==='done'&&!r.reviewed))view='ready';
   const agentById=id=>db.agents.find(a=>a.id===id);
+  // Deletes apply at once and the toast offers Undo while it shows, instead of a confirm dialog before.
+  const undoable=(msg,restore)=>{toast(msg);const b=document.createElement('button');b.type='button';b.textContent='Undo';b.onclick=()=>{b.remove();restore();persist();toast('Restored.');};document.getElementById('toast').append(' ',b);};
   const unreviewed=()=>db.runs.filter(r=>r.status==='done'&&!r.reviewed);
   // Keeps history to 100 runs by dropping the oldest ones that need nothing; a result still waiting for review is never dropped.
   const trimRuns=()=>{let over=db.runs.length-100;for(let i=db.runs.length-1;i>=0&&over>0;i--)if(!(db.runs[i].status==='done'&&!db.runs[i].reviewed)){db.runs.splice(i,1);over--;}};
@@ -78,7 +80,7 @@
     return `<aside class="ag-side"><div class="ag-brand"><span class="nous-artwork brand-artwork" aria-hidden="true"></span><small>AGENTS</small></div>
       <button type="button" class="ag-new" data-act="new">＋ New agent</button>
       <nav aria-label="Agents">${item('ready','Ready for you','◉',n,n===1?'result':'results')}${running?`<button type="button" data-open="${running.agentId}" class="ag-doing"><span class="ag-ico ag-pulse" aria-hidden="true">◌</span>Doing for you<b>1<span class="sr-only"> running</span></b></button>`:''}${item('agents','My agents','◇',db.agents.length,db.agents.length===1?'agent':'agents')}${item('templates','Templates','▦')}${item('settings','Settings','⚙')}</nav>
-      <div class="ag-side-foot"><button type="button" data-act="workspace">Thinking workspace ↗</button><span class="ag-model" title="Provider and model used for runs">${esc(pick().label)}</span></div></aside>`;
+      <div class="ag-side-foot"><button type="button" data-act="workspace"><span class="ag-long">Thinking w</span><span class="ag-short">W</span>orkspace ↗</button><span class="ag-model" title="Provider and model used for runs">${esc(pick().label)}</span></div></aside>`;
   }
   const header=(eyebrow,h1,lede='')=>`<header class="ag-head"><div class="ag-eyebrow">${eyebrow}</div><h1 tabindex="-1">${h1}</h1>${lede?`<p class="ag-lede">${lede}</p>`:''}</header>`;
   // Past runs on an agent's page can be repeated as they were, or loaded into the request box to change first.
@@ -153,9 +155,11 @@
     const sel=el?.id?'#'+CSS.escape(el.id):k?`[data-${k}="${CSS.escape(v)}"]`:null;
     const head=el?.matches('.ag-main h1');
     root.innerHTML=side()+`<main class="ag-main" tabindex="-1">${main}</main>`;
-    if(head)return root.querySelector('.ag-main h1')?.focus({preventScroll:true});
-    if(el)((sel&&root.querySelector(sel))||root.querySelector('.ag-main'))?.focus({preventScroll:!sel});
-    if(document.body.classList.contains('mode-agents'))sync(false);
+    if(head)root.querySelector('.ag-main h1')?.focus({preventScroll:true});
+    else if(el)((sel&&root.querySelector(sel))||root.querySelector('.ag-main'))?.focus({preventScroll:!sel});
+    if(!document.body.classList.contains('mode-agents'))return;
+    sync(false);const n=unreviewed().length;
+    document.title=(view==='ready'?'Ready for you'+(n?` (${n})`:''):view==='templates'?'Templates':view==='settings'?'Settings':view==='wizard'?'New agent':view==='agent'?agentById(openId)?.name||'Agent':'My agents')+' · Nous';
   }
   // A new view or wizard step moves focus to its heading, so screen readers announce where you are without reading the whole page.
   const focusHead=()=>(root.querySelector('.ag-main h1')||root.querySelector('.ag-main'))?.focus({preventScroll:true});
@@ -222,7 +226,7 @@
     finally{clearTimeout(timeout);clearInterval(ticker);running=null;if(document.activeElement?.dataset?.act==='cancel')root.querySelector('#ag-run')?.focus();persist();if(view==='agent'&&openId===a.id||view!=='wizard')draw();}
   }
   // The studio covers the workspace; inert keeps Tab, screen readers and scroll-into-view out of what sits behind it.
-  function setMode(mode,push=true){document.body.classList.toggle('mode-agents',mode==='agents');sync(push);for(const el of document.body.children)if(el!==root&&!el.matches('dialog,script,#toast'))el.inert=mode==='agents';try{localStorage.setItem(MODE,mode);}catch{}if(mode==='agents')draw();else{render();$('#agents-toggle')?.focus();}}
+  function setMode(mode,push=true){document.body.classList.toggle('mode-agents',mode==='agents');sync(push);for(const el of document.body.children)if(el!==root&&!el.matches('dialog,script,#toast'))el.inert=mode==='agents';try{localStorage.setItem(MODE,mode);}catch{}if(mode==='agents')draw();else{document.title=BASE_TITLE;render();$('#agents-toggle')?.focus();}}
 
   root.addEventListener('click',e=>{
     const t=e.target.closest('button');if(!t||t.disabled)return;const d=t.dataset;
@@ -233,9 +237,11 @@
     if(d.review){const r=db.runs.find(r=>r.id===d.review);if(r){r.reviewed=true;persist();draw();refocus(r.id);toast('Marked reviewed.');}return;}
     if(d.copy){const r=db.runs.find(r=>r.id===d.copy);navigator.clipboard?.writeText(`# ${r.title}\n\n${r.answer}`).then(()=>toast('Copied to the clipboard.'),()=>toast('The browser blocked clipboard access.'));return;}
     if(d.keep){const r=db.runs.find(r=>r.id===d.keep);if(r){keep(r);persist();draw();refocus(r.id);toast('Added to your workspace as an artifact.');}return;}
-    if(d.delete){const a=agentById(d.delete),n=db.runs.filter(r=>r.agentId===a.id).length;if(!confirm(`Delete “${a.name}” and its ${n} result${n===1?'':'s'}? Results already saved to the workspace stay there.`))return;db.agents=db.agents.filter(x=>x.id!==a.id);delete drafts[a.id];db.runs=db.runs.filter(r=>r.agentId!==a.id);persist();go('agents');return toast('Agent deleted.');}
+    if(d.delete){const a=agentById(d.delete),n=db.runs.filter(r=>r.agentId===a.id).length;const i=db.agents.indexOf(a),dr=drafts[a.id],gone=db.runs.map((r,j)=>[j,r]).filter(([,r])=>r.agentId===a.id);db.agents.splice(i,1);delete drafts[a.id];db.runs=db.runs.filter(r=>r.agentId!==a.id);persist();go('agents');
+      return undoable(`Deleted “${a.name}” and ${n} result${n===1?'':'s'}.`,()=>{db.agents.splice(Math.min(i,db.agents.length),0,a);if(dr!==undefined)drafts[a.id]=dr;for(const [j,r] of gone)db.runs.splice(Math.min(j,db.runs.length),0,r);go('agent',a.id);});}
     if(d.download){const r=db.runs.find(r=>r.id===d.download);download(`${r.title.toLowerCase().replace(/[^\p{L}\p{N}]+/gu,'-').replace(/^-|-$/g,'').slice(0,60)||'result'}.md`,`# ${r.title}\n\n${r.answer}\n`,'text/markdown');return toast('Downloaded as Markdown.');}
-    if(d.drop){const r=db.runs.find(r=>r.id===d.drop);if(!r||r.status==='done'&&!confirm(`Delete “${r.title}”? A copy already saved to the workspace stays there.`))return;db.runs.splice(db.runs.indexOf(r),1);persist();draw();(root.querySelector(view==='agent'?'#ag-request':'[data-review]')||root.querySelector('h1'))?.focus();return toast('Run deleted.');}
+    if(d.drop){const r=db.runs.find(r=>r.id===d.drop);if(!r)return;const i=db.runs.indexOf(r);db.runs.splice(i,1);persist();draw();(root.querySelector(view==='agent'?'#ag-request':'[data-review]')||root.querySelector('h1'))?.focus();
+      return undoable('Run deleted.',()=>{db.runs.splice(Math.min(i,db.runs.length),0,r);draw();root.querySelector(`[data-drop="${CSS.escape(r.id)}"]`)?.focus();});}
     if(d.rerun){const r=db.runs.find(r=>r.id===d.rerun);return r&&run(agentById(r.agentId),r.request||'',r.parentId);}
     if(d.follow){const r=db.runs.find(r=>r.id===d.follow);if(!r)return;follows[r.agentId]=r.id;drafts[r.agentId]='';go('agent',r.agentId);return root.querySelector('#ag-request')?.focus();}
     if(d.unfollow){delete follows[d.unfollow];draw();return root.querySelector('#ag-request')?.focus();}
