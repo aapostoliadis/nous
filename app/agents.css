@@ -90,7 +90,11 @@ body.mode-agents .agents-app{display:grid}
 .ag-md h3{font-size:15.5px!important}
 .ag-md pre{padding:12px;border-radius:10px;background:var(--ag-soft);overflow:auto}
 .ag-md code{font-family:var(--ag-mono);font-size:.92em}
-.ag-row{margin:2px 0;font-size:13.5px}
+.ag-md a{color:var(--ag-accent-text);text-decoration:underline;text-underline-offset:2px}
+.ag-table{overflow-x:auto;margin:8px 0}
+.ag-md table{border-collapse:collapse;font-size:13.5px}
+.ag-md th,.ag-md td{border:1px solid var(--ag-line);padding:6px 10px;text-align:left;vertical-align:top}
+.ag-md th{background:var(--ag-soft);font-weight:600}
 
 /* Agent page and run */
 .ag-agent-head{display:flex;gap:18px;align-items:flex-start}
