@@ -328,3 +328,27 @@ default to Light; why was not stated.
 (removed), and following the OS setting when nothing is saved (the
 previous default). The icon tiles were picked over other renderings
 shown side by side; why is unknown.
+
+## The style menu is repeated in the agents studio Settings
+
+**Id:** 653f1bca-4dbf-4353-8343-fc26ba58e483
+**Type:** decision
+**Status:** active
+**Evidence:** inferred
+**Source:** browser check of the studio, 2026-11-01; nous PR #21
+
+The studio's Settings view has a Style card with the same System, Light
+and Warm ink options as the header menu. It copies the header options'
+markup, so their icons, swatches and pressed state come from one place.
+`app/theme.js` handles option clicks anywhere on the page, not only
+inside `#theme-menu`.
+
+**Reason:** the header sits behind the studio and is inert while the
+studio is open (see "The workspace goes inert behind the agents
+studio"), so the style button could not be reached without leaving the
+studio. Repeating the options inside the studio restores access and
+leaves the inert decision intact. The maintainer approved the fix.
+
+**Rejected alternatives:** unknown. Lifting the header out of `inert`
+or above the overlay would have reversed the decision above; it was not
+weighed as an option.

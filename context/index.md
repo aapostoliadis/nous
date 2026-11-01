@@ -49,7 +49,7 @@
 ## N
 
 - [nous-api-keys.md](nous-api-keys.md) — Nous: whose provider key pays for model calls, how the browser holds it, why the hosted proxy has no model allowlist, and why requests share no server-wide lock
-- [nous-interface.md](nous-interface.md) — Nous: why proposal review is a slide-over, Rejected is a side exit, the model picker hides behind a chip and lists only text models, how mobile/touch layouts work, why only the Ask input is pinned on desktop, why workspace commands run locally with any provider, why there are two styles (Light and Warm ink) with Light as the default, why the agents studio has only the glass style, and why the workspace goes inert behind it
+- [nous-interface.md](nous-interface.md) — Nous: why proposal review is a slide-over, Rejected is a side exit, the model picker hides behind a chip and lists only text models, how mobile/touch layouts work, why only the Ask input is pinned on desktop, why workspace commands run locally with any provider, why there are two styles (Light and Warm ink) with Light as the default, why the agents studio has only the glass style, why the workspace goes inert behind it, and why the style menu is repeated in studio Settings
 
 ## O
 
