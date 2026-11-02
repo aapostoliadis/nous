@@ -215,3 +215,4 @@ body.mode-agents .agents-app{display:grid}
   .ag-prompt textarea,.ag-input,.ag-own input,.ag-fields select{font-size:16px}
 }
 @media (prefers-reduced-motion:reduce){.ag-pulse,.ag-dot,.ag-bar i{animation:none}.agents-app button{transition:none}}
+.ag-hit{background:color-mix(in srgb,var(--ag-accent) 26%,transparent);color:inherit;border-radius:2px;padding:0 1px}
