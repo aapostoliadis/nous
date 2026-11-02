@@ -25,7 +25,7 @@
     {topic:'DEPTH',question:'How much detail should it go into?',options:['The headline and three key points','A balanced overview','Thorough, with reasoning and caveats']}
   ];
   if(!db.drafts||typeof db.drafts!=='object'||Array.isArray(db.drafts))db.drafts={};
-  let view='agents',openId=null,running=null,ticker=null,loading='',w=db.draft,drafts=db.drafts,follows={},draftTimer=null,find='',order='new',shown=10,rfind='';
+  let view='agents',openId=null,running=null,ticker=null,loading='',w=db.draft,drafts=db.drafts,follows={},draftTimer=null,find='',order='new',shown=10,rfind='',finished=null;
   if(db.runs.some(r=>r.status==='done'&&!r.reviewed))view='ready';
   const agentById=id=>db.agents.find(a=>a.id===id);
   // Deletes apply at once and the toast offers Undo for 8 seconds, held while the button is hovered or focused, instead of a confirm dialog before.
@@ -102,7 +102,11 @@
   }
   // From 6 agents the list gets a search box and a sort; runs are stored newest first, so an agent's first run is its last use.
   const lastUsed=a=>db.runs.find(r=>r.agentId===a.id)?.time||'';
-  const filter=()=>{const q=db.agents.length>=6?find.trim().toLowerCase():'';let n=0;for(const c of root.querySelectorAll('.ag-grid [data-q]')){c.hidden=!!q&&!c.dataset.q.includes(q);n+=!c.hidden;}const s=root.querySelector('#ag-found');if(s)s.textContent=q?(n?`${n} of ${db.agents.length} agents match.`:`No agents match “${find.trim()}”.`):'';};
+  // Wraps each case-insensitive match of q in <mark class="ag-hit">, clearing earlier marks first.
+  const hl=(el,q)=>{for(const m of el.querySelectorAll('mark.ag-hit'))m.replaceWith(m.textContent);el.normalize();if(!q)return;const t=document.createTreeWalker(el,NodeFilter.SHOW_TEXT),hits=[];while(t.nextNode())if(t.currentNode.nodeValue.toLowerCase().includes(q))hits.push(t.currentNode);for(const n of hits){const v=n.nodeValue,l=v.toLowerCase(),f=document.createDocumentFragment();let i=0,j;while((j=l.indexOf(q,i))>-1){const m=document.createElement('mark');m.className='ag-hit';m.textContent=v.slice(j,j+q.length);f.append(v.slice(i,j),m);i=j+q.length;}f.append(v.slice(i));n.replaceWith(f);}};
+  // Marks matches in the runs list; a card whose only matches are in the full result opens it, so the match is visible.
+  const hlRuns=a=>{const {q}=matchRuns(a);for(const e of root.querySelectorAll('#ag-runs .ag-result :is(h2,.ag-highlights,.ag-md,.ag-query,.ag-failed > p)'))hl(e,q);if(q)for(const c of root.querySelectorAll('#ag-runs .ag-result')){const d=c.querySelector('details');if(d&&!d.open&&d.querySelector('mark.ag-hit')&&[...c.querySelectorAll('mark.ag-hit')].every(m=>d.contains(m)))d.open=true;}};
+  const filter=()=>{const q=db.agents.length>=6?find.trim().toLowerCase():'';let n=0;for(const c of root.querySelectorAll('.ag-grid [data-q]')){c.hidden=!!q&&!c.dataset.q.includes(q);n+=!c.hidden;for(const e of c.querySelectorAll('h2,p'))hl(e,q);}const s=root.querySelector('#ag-found');if(s)s.textContent=q?(n?`${n} of ${db.agents.length} agents match.`:`No agents match “${find.trim()}”.`):'';};
   const LIMIT_NOTE='Close to the limit: a run stops at 1:35. Wait, or cancel and ask for less.';
   // Browsers keep about 5 MB per site, counted in characters; the workspace shares it with the agents.
   const MONTH=30*864e5,old=()=>db.runs.filter(r=>r.status!=='running'&&!(r.status==='done'&&!r.reviewed)&&Date.now()-new Date(r.time)>MONTH);
@@ -130,6 +134,7 @@
         <div class="ag-fields"><label>Provider<select data-mirror="ai-provider">${[...sel.options].filter(o=>o.value!=='local').map(o=>`<option value="${esc(o.value)}"${o.value===sel.value?' selected':''}>${esc(o.textContent)}</option>`).join('')}</select></label>
         <label>Model<select data-mirror="ai-model"${mod.disabled?' disabled':''}>${mod.innerHTML}</select></label></div>
         <div class="ag-actions"><button type="button" class="ag-primary" data-act="keys">Manage API keys</button><span class="ag-model">${esc(pick().ok?'Ready to run':'Add a key and choose a model to run agents')}</span></div></section>
+      ${'Notification' in window?`<section class="ag-card ag-settings"><h2>Notifications</h2><div class="ag-rows"><label class="ag-row-opt"><span><strong>Tell me when a run finishes</strong><small>Shows a browser notification when a run ends while Nous is in another tab.</small></span><input type="checkbox" id="ag-notify"${notifyOn()?' checked':''}></label></div></section>`:''}
       <section class="ag-card ag-settings"><h2>Style</h2><p>The workspace header sits behind the studio, so its style menu is repeated here.</p>
         <div class="ag-actions ag-styles" role="group" aria-label="Style">${[...document.querySelectorAll('#theme-menu [data-theme-option]')].map(o=>o.outerHTML).join('')}</div></section>
       <section class="ag-card ag-settings"><h2>What agents can do</h2><p>Agents write: briefs, plans, critiques, drafts and summaries, from your request and, if you allow it, your workspace. They cannot browse the web, search, send email or act in other apps, and they say so rather than pretend.</p>
@@ -180,9 +185,13 @@
     else if(el)((sel&&root.querySelector(sel))||root.querySelector('.ag-main'))?.focus({preventScroll:!sel});
     if(!document.body.classList.contains('mode-agents'))return;
     if(view==='agents')filter();
-    sync(false);const n=unreviewed().length;
-    document.title=(view==='ready'?'Ready for you'+(n?` (${n})`:''):view==='templates'?'Templates':view==='settings'?'Settings':view==='wizard'?'New agent':view==='agent'?agentById(openId)?.name||'Agent':'My agents')+' · Nous';
+    if(view==='agent'&&agentById(openId))hlRuns(agentById(openId));
+    sync(false);retitle();
   }
+  // The tab title shows a run in progress, and a run that finished while you were in another tab, until you come back.
+  function retitle(){if(!document.body.classList.contains('mode-agents'))return;const n=unreviewed().length,name=id=>agentById(id)?.name||'Agent';
+    document.title=running?`Running… · ${name(running.agentId)} · Nous`:finished?`${finished.ok?'✓ Result ready':'Run failed'} · ${finished.name} · Nous`:(view==='ready'?'Ready for you'+(n?` (${n})`:''):view==='templates'?'Templates':view==='settings'?'Settings':view==='wizard'?'New agent':view==='agent'?name(openId):'My agents')+' · Nous';}
+  const NOTIFY='nous-agents-notify',notifyOn=()=>{try{return localStorage.getItem(NOTIFY)==='1'&&'Notification' in window&&Notification.permission==='granted';}catch{return false;}};
   // A new view or wizard step moves focus to its heading, so screen readers announce where you are without reading the whole page.
   const focusHead=()=>(root.querySelector('.ag-main h1')||root.querySelector('.ag-main'))?.focus({preventScroll:true});
   // Mark reviewed and Save swap their button for a badge: keep focus on the same card, or on the next result once the card leaves the list.
@@ -246,7 +255,7 @@
       if(a.saveToWorkspace)keep(record);
       toast(`${a.name} finished. The result is in Ready for you.`);
     }catch(e){const cancelled=ctrl.signal.aborted&&!timedOut;Object.assign(record,{status:cancelled?'cancelled':'error',error:cancelled?'Cancelled. Nothing was saved to your workspace.':timedOut?`Stopped after 95 seconds, the longest a run can take. Try a shorter request${a.useWorkspace?' or turn off workspace reading for this agent':''}. Nothing was saved to your workspace.`:e instanceof TypeError||!navigator.onLine?`Connection lost before the run finished.${running.answer?' The partial output is kept below.':''} Nothing was saved to your workspace.`:e.message,answer:running.answer});toast(`${a.name} ${cancelled?'stopped':'did not finish'}. Details are in its previous runs.`);}
-    finally{clearTimeout(timeout);clearInterval(ticker);running=null;if(document.activeElement?.dataset?.act==='cancel')root.querySelector('#ag-run')?.focus();persist();if(view==='agent'&&openId===a.id||view!=='wizard')draw();}
+    finally{clearTimeout(timeout);clearInterval(ticker);running=null;if(document.activeElement?.dataset?.act==='cancel')root.querySelector('#ag-run')?.focus();persist();if(document.hidden&&record.status!=='cancelled'){const ok=record.status==='done';finished={name:a.name,ok};if(notifyOn()){const n=new Notification(ok?`${a.name} finished`:`${a.name} did not finish`,{body:ok?record.title||'The result is in Ready for you.':record.error,tag:'nous-agents'});n.onclick=()=>{focus();go('agent',a.id);n.close();};}}if(view==='agent'&&openId===a.id||view!=='wizard')draw();retitle();}
   }
   // The studio covers the workspace; inert keeps Tab, screen readers and scroll-into-view out of what sits behind it.
   function setMode(mode,push=true){document.body.classList.toggle('mode-agents',mode==='agents');sync(push);for(const el of document.body.children)if(el!==root&&!el.matches('dialog,script,#toast'))el.inert=mode==='agents';try{localStorage.setItem(MODE,mode);}catch{}if(mode==='agents')draw();else{document.title=BASE_TITLE;render();$('#agents-toggle')?.focus();}}
@@ -304,9 +313,11 @@
       }
     }
   });
-  root.addEventListener('input',e=>{if(e.target.id==='ag-find'){find=e.target.value;return filter();}if(e.target.id==='ag-rfind'){const a=agentById(openId);rfind=e.target.value;shown=10;root.querySelector('#ag-runs').innerHTML=runList(a);root.querySelector('#ag-rfound').textContent=found(a);return;}if(e.target.id==='ag-request'&&openId){drafts[openId]=e.target.value;clearTimeout(draftTimer);draftTimer=setTimeout(persist,400);}const f=e.target.dataset.field;if(f&&w){w[f]=e.target.value;saveDraft();if(f==='goal'&&e.target.value.trim()){e.target.removeAttribute('aria-invalid');root.querySelector('#ag-goal-err')?.setAttribute('hidden','');}const p=root.querySelector('#ag-preview');if(p)p.innerHTML=preview();}});
+  root.addEventListener('input',e=>{if(e.target.id==='ag-find'){find=e.target.value;return filter();}if(e.target.id==='ag-rfind'){const a=agentById(openId);rfind=e.target.value;shown=10;root.querySelector('#ag-runs').innerHTML=runList(a);hlRuns(a);root.querySelector('#ag-rfound').textContent=found(a);return;}if(e.target.id==='ag-request'&&openId){drafts[openId]=e.target.value;clearTimeout(draftTimer);draftTimer=setTimeout(persist,400);}const f=e.target.dataset.field;if(f&&w){w[f]=e.target.value;saveDraft();if(f==='goal'&&e.target.value.trim()){e.target.removeAttribute('aria-invalid');root.querySelector('#ag-goal-err')?.setAttribute('hidden','');}const p=root.querySelector('#ag-preview');if(p)p.innerHTML=preview();}});
   root.addEventListener('change',e=>{
     const t=e.target;
+    // Turning notifications on asks the browser for permission; if it is refused, the box stays off.
+    if(t.id==='ag-notify'){const set=v=>{try{localStorage.setItem(NOTIFY,v?'1':'0');}catch{}t.checked=v;};if(!t.checked)return set(false);Promise.resolve(Notification.permission==='granted'||Notification.requestPermission()).then(p=>{const ok=p===true||p==='granted';set(ok);if(!ok)toast(Notification.permission==='denied'?'Notifications are blocked for this site. Allow them in your browser settings, then try again.':'Notifications stay off.');});return;}
     if(t.dataset.toggle&&w){w[t.dataset.toggle]=t.checked;saveDraft();root.querySelector('#ag-preview').innerHTML=preview();}
     // Imports agents only: results stay in the browser that made them, and an agent already here (same id) is left as it is.
     if(t.id==='ag-import'&&t.files[0])t.files[0].text().then(text=>{const list=JSON.parse(text)?.agents;if(!Array.isArray(list))throw 0;const str=v=>typeof v==='string'?v.trim():'';let added=0,updated=0;for(const x of list){if(!str(x?.name)||!str(x?.instructions))continue;const now=new Date().toISOString(),old=db.agents.find(a=>a.id===str(x.id));if(old)updated++;else added++;const fields={name:str(x.name),description:str(x.description),instructions:str(x.instructions),starter:str(x.starter),goal:str(x.goal),answers:Array.isArray(x.answers)?x.answers.filter(q=>typeof q?.question==='string'&&typeof q?.answer==='string'):[],useWorkspace:!!x.useWorkspace,saveToWorkspace:!!x.saveToWorkspace,pinned:!!x.pinned,updated:str(x.updated)||now};if(old)Object.assign(old,fields);else db.agents.push({id:str(x.id)||crypto.randomUUID(),created:str(x.created)||now,...fields});}persist();draw();const n=k=>`${k} agent${k===1?'':'s'}`;toast(added||updated?[added&&`Added ${n(added)}`,updated&&`updated ${n(updated)}`].filter(Boolean).join(', ').replace(/^u/,'U')+'.':'No agents in that file.');}).catch(()=>toast('That file is not a Nous agents export.')).finally(()=>{t.value='';});
@@ -322,6 +333,9 @@
   // Ctrl/Cmd+Enter runs from the request box.
   root.addEventListener('keydown',e=>{if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)&&e.target.id==='ag-request'){e.preventDefault();e.target.form.requestSubmit();}});
   // Ctrl/Cmd+Z presses Undo while the toast offers it; text fields keep their own undo.
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden&&finished){finished=null;retitle();}});
+  // "/" jumps to search, as in most web apps. Ignored while typing or with a dialog open.
+  document.addEventListener('keydown',e=>{if(e.key!=='/'||e.ctrlKey||e.metaKey||e.altKey||e.defaultPrevented||!document.body.classList.contains('mode-agents')||e.target.closest?.('input,textarea,select,[contenteditable]')||document.querySelector('dialog[open]'))return;const f=root.querySelector('#ag-rfind,#ag-find');if(!f)return;e.preventDefault();f.focus();f.select();});
   document.addEventListener('keydown',e=>{if(e.key.toLowerCase()!=='z'||!(e.ctrlKey||e.metaKey)||e.shiftKey||e.altKey||e.defaultPrevented||!document.body.classList.contains('mode-agents')||e.target.closest?.('input,textarea,select,[contenteditable]'))return;const b=$('#toast.show button');if(b){e.preventDefault();b.click();}});
   // Escape leaves the wizard the same way its Exit button does; skipped when an open dialog or another handler has claimed the key.
   document.addEventListener('keydown',e=>{if(e.key!=='Escape'||e.defaultPrevented||view!=='wizard'||loading||document.querySelector('dialog[open]')||e.target.matches?.('select'))return;e.preventDefault();saveDraft();toast(w.editingId?'Changes kept as a draft.':'Draft saved. Pick it up from New agent.');go(w.editingId?'agent':'agents',w.editingId||openId);});
