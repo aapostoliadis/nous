@@ -25,7 +25,7 @@
     {topic:'DEPTH',question:'How much detail should it go into?',options:['The headline and three key points','A balanced overview','Thorough, with reasoning and caveats']}
   ];
   if(!db.drafts||typeof db.drafts!=='object'||Array.isArray(db.drafts))db.drafts={};
-  let view='agents',openId=null,running=null,ticker=null,loading='',w=db.draft,drafts=db.drafts,follows={},draftTimer=null,find='',order='new',shown=10,rfind='',finished=null;
+  let view='agents',openId=null,running=null,ticker=null,loading='',w=db.draft,drafts=db.drafts,follows={},draftTimer=null,designing=null,find='',order='new',shown=10,rfind='',finished=null;
   if(db.runs.some(r=>r.status==='done'&&!r.reviewed))view='ready';
   const agentById=id=>db.agents.find(a=>a.id===id);
   // Deletes apply at once and the toast offers Undo for 8 seconds, held while the button is hovered or focused, instead of a confirm dialog before.
@@ -202,15 +202,17 @@
   const parseRoute=()=>{const [m,v,id]=location.hash.slice(1).split('/');return m==='agents'?{view:['ready','templates','settings','wizard','agent'].includes(v)?v:'agents',id:v==='agent'?decodeURIComponent(id||''):null}:null;};
   function go(v,id){const moved=v!==view;if(moved||(id??openId)!==openId){shown=10;rfind='';}view=v;openId=id??openId;if(document.body.classList.contains('mode-agents'))sync(true);draw();root.querySelector('.ag-main')?.scrollTo(0,0);if(moved&&document.body.classList.contains('mode-agents'))focusHead();}
   const saveDraft=()=>{db.draft=w;persist();};
-  function startWizard(seedData={},step=0){w={step,goal:'',questions:[],qi:0,answers:[],name:'',description:'',instructions:'',starter:'',useWorkspace:false,saveToWorkspace:false,...seedData};saveDraft();go('wizard');}
+  function startWizard(seedData={},step=0){designing?.abort();designing=null;loading='';w={step,goal:'',questions:[],qi:0,answers:[],name:'',description:'',instructions:'',starter:'',useWorkspace:false,saveToWorkspace:false,...seedData};saveDraft();go('wizard');}
 
+  // Starting another wizard (say, from a template) cancels a draft in progress; the cancelled call resolves to null and its caller stops.
   async function design(stage){
     const {provider,model,ok}=pick(),answers=w.answers;
     if(ok){
+      const ctl=designing=new AbortController();
       loading=stage==='questions'?'Working out what to ask you…':'Drafting your agent…';draw();root.querySelector('.ag-loading')?.focus({preventScroll:true});
-      try{const r=await post('/api/agents/design',provider,{provider,model,stage,goal:w.goal,answers});const data=await r.json().catch(()=>({}));if(!r.ok)throw Error(data.error||'The provider could not draft this.');return data;}
-      catch(e){toast(`${e.message} Using a local draft instead.`);}
-      finally{loading='';}
+      try{const r=await post('/api/agents/design',provider,{provider,model,stage,goal:w.goal,answers},ctl.signal);const data=await r.json().catch(()=>({}));if(ctl.signal.aborted)return null;if(!r.ok)throw Error(data.error||'The provider could not draft this.');return data;}
+      catch(e){if(ctl.signal.aborted)return null;toast(`${e.message} Using a local draft instead.`);}
+      finally{if(designing===ctl){designing=null;loading='';}}
     }
     if(stage==='questions')return {questions:FALLBACK_QUESTIONS};
     const words=w.goal.replace(/[^\p{L}\p{N}\s'-]/gu,' ').split(/\s+/).filter(x=>x.length>2).slice(0,3);
@@ -218,7 +220,7 @@
       instructions:`Your purpose: ${w.goal}\n\nHow to work:\n${answers.map(a=>`- ${a.question} ${a.answer}`).join('\n')}${answers.length?'\n':''}- Work only from the request and any workspace context you are given. You cannot browse, search or send anything.\n- When information is missing, say what you would need instead of guessing.\n\nOutput: Markdown with a clear title, short sections and a closing list of open questions.`,starter:''};
   }
   async function toIdentity(){
-    const data=await design('identity');
+    const data=await design('identity');if(!data)return;
     for(const k of ['name','description','instructions','starter'])if(!w[k]||w.redraft)w[k]=data[k]||w[k];
     w.redraft=false;w.step=2;saveDraft();draw();focusHead();
   }
@@ -304,7 +306,7 @@
       case 'skip':w.redraft=true;return toIdentity();
       case 'next':if(w.step===2&&(!w.name?.trim()||!w.instructions?.trim())){toast('Give the agent a name and instructions.');return root.querySelector(`[data-field=${w.name?.trim()?'instructions':'name'}]`)?.focus();}w.step++;saveDraft();draw();return focusHead();
       case 'questions':if(!w.goal?.trim()){const g=root.querySelector('[data-field=goal]');g?.setAttribute('aria-invalid','true');root.querySelector('#ag-goal-err')?.removeAttribute('hidden');return g?.focus();}
-        return design('questions').then(data=>{w.questions=data.questions;w.qi=0;w.answers=[];w.step=1;saveDraft();draw();focusHead();});
+        return design('questions').then(data=>{if(!data)return;w.questions=data.questions;w.qi=0;w.answers=[];w.step=1;saveDraft();draw();focusHead();});
       case 'create':{
         const fields={name:w.name.trim(),description:(w.description||'').trim(),instructions:w.instructions.trim(),starter:(w.starter||'').trim(),goal:w.goal,answers:w.answers,useWorkspace:!!w.useWorkspace,saveToWorkspace:!!w.saveToWorkspace,updated:new Date().toISOString()};
         if(!fields.name||!fields.instructions){w.step=2;draw();toast('Give the agent a name and instructions.');return root.querySelector(`[data-field=${w.name?.trim()?'instructions':'name'}]`)?.focus();}
