@@ -25,7 +25,7 @@
     {topic:'DEPTH',question:'How much detail should it go into?',options:['The headline and three key points','A balanced overview','Thorough, with reasoning and caveats']}
   ];
   if(!db.drafts||typeof db.drafts!=='object'||Array.isArray(db.drafts))db.drafts={};
-  let view='agents',openId=null,running=null,ticker=null,loading='',w=db.draft,drafts=db.drafts,follows={},draftTimer=null,find='',order='new',shown=10;
+  let view='agents',openId=null,running=null,ticker=null,loading='',w=db.draft,drafts=db.drafts,follows={},draftTimer=null,find='',order='new',shown=10,rfind='';
   if(db.runs.some(r=>r.status==='done'&&!r.reviewed))view='ready';
   const agentById=id=>db.agents.find(a=>a.id===id);
   // Deletes apply at once and the toast offers Undo for 8 seconds, held while the button is hovered or focused, instead of a confirm dialog before.
@@ -136,13 +136,17 @@
         <p>Agents and results are stored only in this browser. Each run sends the agent's instructions, your request and any workspace context to the provider you chose.</p>
         <div class="ag-actions"><button type="button" data-act="export"${db.agents.length?'':' disabled'}>Export agents</button><button type="button" data-act="import">Import agents</button><input type="file" id="ag-import" accept="application/json,.json" hidden aria-label="Agents file to import"><button type="button" class="ag-danger" data-act="wipe">Delete all agents and results</button></div></section>${storage()}`;
   }
+  // Runs on an agent page, narrowed by the runs search and paged by `shown`.
+  const matchRuns=a=>{const all=db.runs.filter(r=>r.agentId===a.id&&r.status!=='running'),q=all.length>=6?rfind.trim().toLowerCase():'';return {all,q,runs:q?all.filter(r=>[r.title,r.request,r.answer,r.error].join(' ').toLowerCase().includes(q)):all};};
+  const found=a=>{const {all,q,runs}=matchRuns(a);return q?(runs.length?`${runs.length} of ${all.length} runs match.`:`No runs match “${rfind.trim()}”.`):'';};
+  function runList(a){const {all,runs}=matchRuns(a);return `${!all.length?'<p class="ag-note">No runs yet. Ask for one above.</p>':runs.length?`<div class="ag-stack">${runs.slice(0,shown).map(r=>r.status==='done'?runCard(r,{agent:false,level:3}):`<article class="ag-card ag-result ag-failed" id="ag-run-${r.id}" tabindex="-1"><div class="ag-eyebrow" role="heading" aria-level="3">${esc(ago(r.time))} · ${r.status==='cancelled'?'CANCELLED':'DID NOT FINISH'}</div><p>${esc(r.error)}</p>${r.answer?`<details><summary>Partial output</summary><div class="ag-md">${md(r.answer)}</div></details>`:''}<p class="ag-query">${esc(r.request)}</p><div class="ag-actions">${rerun(r)}${more(r,reuse(r),'the run from '+ago(r.time))}</div></article>`).join('')}</div>${runs.length>shown?`<button type="button" class="ag-show-more" data-act="more-runs">Show ${Math.min(10,runs.length-shown)} more <span class="ag-note">(${runs.length-shown} older)</span></button>`:''}`:''}`;}
   function vAgent(){
     const a=agentById(openId);if(!a){view='agents';return vAgents();}
     const runs=db.runs.filter(r=>r.agentId===a.id&&r.status!=='running'),live=running?.agentId===a.id;
     return `<header class="ag-head ag-agent-head">${avatar(a,'lg')}<div><div class="ag-eyebrow">AGENT${a.useWorkspace?' · READS WORKSPACE':''}${a.saveToWorkspace?' · SAVES TO WORKSPACE':''}</div><h1 tabindex="-1">${esc(a.name)}</h1><p class="ag-lede">${esc(a.description)}</p></div><div class="ag-actions"><button type="button" data-edit="${a.id}">Edit</button><button type="button" data-duplicate="${a.id}">Duplicate</button><button type="button" class="ag-danger" data-delete="${a.id}">Delete</button></div></header>
       ${live?`<section class="ag-card ag-now" aria-busy="true"><div class="ag-now-top"><div class="ag-eyebrow"><i class="ag-dot"></i> HAPPENING NOW</div><span id="ag-timer" class="ag-timer">${clock(Date.now()-running.started)}</span><button type="button" data-act="cancel">Cancel</button></div><div class="ag-bar"><i></i></div><div class="ag-eyebrow" id="ag-phase" aria-live="polite">${running.answer?'WRITING IT UP…':'THINKING IT THROUGH…'}</div><p class="ag-note ag-limit" id="ag-limit" aria-live="polite">${Date.now()-running.started>=60000?LIMIT_NOTE:''}</p><p class="ag-query">${esc(running.request||a.starter||'Usual run')}</p><div id="ag-stream" class="ag-md ag-stream">${md(running.answer||'')}</div></section>`:''}
       ${(()=>{const p=db.runs.find(r=>r.id===follows[a.id]&&r.status==='done');return p?`<p class="ag-follow">Following up on “${esc(p.title)}”. The earlier request and result go with your message.<button type="button" data-unfollow="${a.id}">Start fresh</button></p>`:'';})()}<form class="ag-prompt ag-card" data-run="${a.id}"><label class="sr-only" for="ag-request">Ask for a run</label><textarea id="ag-request" name="request" rows="2" maxlength="5000" placeholder="Ask for a run…" aria-keyshortcuts="Control+Enter Meta+Enter"${a.useWorkspace?' aria-describedby="ag-reads"':''}>${esc(drafts[a.id]??a.starter??'')}</textarea>${a.useWorkspace?reads():''}<div class="ag-prompt-bar"><span class="ag-model">${running&&!live?`${esc(agentById(running.agentId)?.name||'Another agent')} is running. One run at a time.`:esc(pick().label)}</span><span class="ag-run-group"><kbd class="ag-hint" aria-hidden="true">${/Mac|iP/.test(navigator.platform)?'⌘':'Ctrl'}+Enter</kbd><button type="submit" id="ag-run" class="ag-primary"${running?' aria-disabled="true"':''}>${running?'Running…':'Run it ↗'}</button></span></div></form>
-      <section><div class="ag-eyebrow ag-section" role="heading" aria-level="2">PREVIOUS RUNS · ${runs.length}</div>${runs.length?`<div class="ag-stack">${runs.slice(0,shown).map(r=>r.status==='done'?runCard(r,{agent:false,level:3}):`<article class="ag-card ag-result ag-failed" id="ag-run-${r.id}" tabindex="-1"><div class="ag-eyebrow" role="heading" aria-level="3">${esc(ago(r.time))} · ${r.status==='cancelled'?'CANCELLED':'DID NOT FINISH'}</div><p>${esc(r.error)}</p>${r.answer?`<details><summary>Partial output</summary><div class="ag-md">${md(r.answer)}</div></details>`:''}<p class="ag-query">${esc(r.request)}</p><div class="ag-actions">${rerun(r)}${more(r,reuse(r),'the run from '+ago(r.time))}</div></article>`).join('')}</div>${runs.length>shown?`<button type="button" class="ag-show-more" data-act="more-runs">Show ${Math.min(10,runs.length-shown)} more <span class="ag-note">(${runs.length-shown} older)</span></button>`:''}`:'<p class="ag-note">No runs yet. Ask for one above.</p>'}</section>`;
+      <section><div class="ag-eyebrow ag-section" role="heading" aria-level="2">PREVIOUS RUNS · ${runs.length}</div>${runs.length>=6?`<div class="ag-tools" role="search"><label class="sr-only" for="ag-rfind">Search runs</label><input type="search" id="ag-rfind" class="ag-input" placeholder="Search runs by title, request or result" value="${esc(rfind)}"><p class="ag-note" id="ag-rfound" aria-live="polite">${found(a)}</p></div>`:''}<div id="ag-runs">${runList(a)}</div></section>`;
   }
   function preview(){
     const d=w||{};
@@ -187,7 +191,7 @@
   const route=()=>document.body.classList.contains('mode-agents')?'#agents/'+view+(view==='agent'?'/'+openId:''):'';
   const sync=push=>{const h=route();if(location.hash!==h)history[push?'pushState':'replaceState'](null,'',h||location.pathname+location.search);};
   const parseRoute=()=>{const [m,v,id]=location.hash.slice(1).split('/');return m==='agents'?{view:['ready','templates','settings','wizard','agent'].includes(v)?v:'agents',id:v==='agent'?decodeURIComponent(id||''):null}:null;};
-  function go(v,id){const moved=v!==view;if(moved||(id??openId)!==openId)shown=10;view=v;openId=id??openId;if(document.body.classList.contains('mode-agents'))sync(true);draw();root.querySelector('.ag-main')?.scrollTo(0,0);if(moved&&document.body.classList.contains('mode-agents'))focusHead();}
+  function go(v,id){const moved=v!==view;if(moved||(id??openId)!==openId){shown=10;rfind='';}view=v;openId=id??openId;if(document.body.classList.contains('mode-agents'))sync(true);draw();root.querySelector('.ag-main')?.scrollTo(0,0);if(moved&&document.body.classList.contains('mode-agents'))focusHead();}
   const saveDraft=()=>{db.draft=w;persist();};
   function startWizard(seedData={},step=0){w={step,goal:'',questions:[],qi:0,answers:[],name:'',description:'',instructions:'',starter:'',useWorkspace:false,saveToWorkspace:false,...seedData};saveDraft();go('wizard');}
 
@@ -227,9 +231,9 @@
   const withParent=(request,p)=>{if(!p)return request;const head=`This follows up on an earlier run.\n\nEarlier request: ${(p.request||'(usual run)').slice(0,500)}\n\nEarlier result:\n`,tail=`\n\nFollow-up: ${request}`,room=5000-head.length-tail.length;return head+(p.answer.length>room?p.answer.slice(0,Math.max(0,room-1))+'…':p.answer)+tail;};
   async function run(a,request,parentId){
     if(running)return toast('One run at a time. Wait for the current run or cancel it.');
+    if(!navigator.onLine)return toast('You are offline. Nothing was run; try again once you are back online.');
     const {provider,model,ok}=pick();
     if(!ok){toast(provider&&provider!=='local'&&window.providerReady?.(provider)?'Your key is saved, but no model is available. Choose one in Settings to run agents.':'Add your ChatGPT or Claude key and choose a model to run agents.');return go('settings');}
-    if(!navigator.onLine)return toast('You are offline. Nothing was run; try again once you are back online.');
     const ctrl=new AbortController();running={agentId:a.id,request,started:Date.now(),answer:'',ctrl};go('agent',a.id);
     let timedOut=false;const timeout=setTimeout(()=>{timedOut=true;ctrl.abort();},95000);
     ticker=setInterval(()=>{for(const t of root.querySelectorAll('#ag-timer,[data-clock]'))t.textContent=clock(Date.now()-running.started);const lim=root.querySelector('#ag-limit');if(lim&&!lim.textContent&&Date.now()-running.started>=60000)lim.textContent=LIMIT_NOTE;if(Date.now()-running.record.beat>=3000){running.record.beat=Date.now();persist();}},1000);
@@ -300,7 +304,7 @@
       }
     }
   });
-  root.addEventListener('input',e=>{if(e.target.id==='ag-find'){find=e.target.value;return filter();}if(e.target.id==='ag-request'&&openId){drafts[openId]=e.target.value;clearTimeout(draftTimer);draftTimer=setTimeout(persist,400);}const f=e.target.dataset.field;if(f&&w){w[f]=e.target.value;saveDraft();if(f==='goal'&&e.target.value.trim()){e.target.removeAttribute('aria-invalid');root.querySelector('#ag-goal-err')?.setAttribute('hidden','');}const p=root.querySelector('#ag-preview');if(p)p.innerHTML=preview();}});
+  root.addEventListener('input',e=>{if(e.target.id==='ag-find'){find=e.target.value;return filter();}if(e.target.id==='ag-rfind'){const a=agentById(openId);rfind=e.target.value;shown=10;root.querySelector('#ag-runs').innerHTML=runList(a);root.querySelector('#ag-rfound').textContent=found(a);return;}if(e.target.id==='ag-request'&&openId){drafts[openId]=e.target.value;clearTimeout(draftTimer);draftTimer=setTimeout(persist,400);}const f=e.target.dataset.field;if(f&&w){w[f]=e.target.value;saveDraft();if(f==='goal'&&e.target.value.trim()){e.target.removeAttribute('aria-invalid');root.querySelector('#ag-goal-err')?.setAttribute('hidden','');}const p=root.querySelector('#ag-preview');if(p)p.innerHTML=preview();}});
   root.addEventListener('change',e=>{
     const t=e.target;
     if(t.dataset.toggle&&w){w[t.dataset.toggle]=t.checked;saveDraft();root.querySelector('#ag-preview').innerHTML=preview();}
@@ -326,8 +330,9 @@
   // The model list loads asynchronously; refresh the labels that show the provider and model when either changes.
   for(const id of ['#ai-provider','#ai-model'])$(id)?.addEventListener('change',()=>{if(document.body.classList.contains('mode-agents')&&view!=='wizard')draw();});
   // The streamed text so far goes into the stored record, so an interrupted run keeps its partial output.
+  addEventListener('beforeunload',e=>{if(running){e.preventDefault();e.returnValue='';}});
   addEventListener('pagehide',()=>{if(running){Object.assign(running.record,{answer:running.answer,beat:0});persist();}});
-  addEventListener('popstate',()=>{const r=parseRoute();if(r){if(r.view!==view||(r.id??openId)!==openId)shown=10;view=r.view;openId=r.id??openId;setMode('agents',false);focusHead();}else if(document.body.classList.contains('mode-agents'))setMode('workspace',false);});
+  addEventListener('popstate',()=>{const r=parseRoute();if(r){if(r.view!==view||(r.id??openId)!==openId){shown=10;rfind='';}view=r.view;openId=r.id??openId;setMode('agents',false);focusHead();}else if(document.body.classList.contains('mode-agents'))setMode('workspace',false);});
   let mode='agents';try{mode=localStorage.getItem(MODE)||'agents';}catch{}
   const start=parseRoute();if(start){view=start.view;openId=start.id;mode='agents';}
   setMode(mode==='workspace'?'workspace':'agents',false);
