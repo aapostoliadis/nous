@@ -216,3 +216,24 @@ body.mode-agents .agents-app{display:grid}
 }
 @media (prefers-reduced-motion:reduce){.ag-pulse,.ag-dot,.ag-bar i{animation:none}.agents-app button{transition:none}}
 .ag-hit{background:color-mix(in srgb,var(--ag-accent) 26%,transparent);color:inherit;border-radius:2px;padding:0 1px}
+.agents-app .ag-loading button,.agents-app .ag-rate button,.agents-app .ag-panel button,.agents-app .ag-trial button{padding:8px 14px;border:1px solid var(--ag-line);border-radius:99px;background:var(--ag-card);font-size:13px}
+.agents-app .ag-rate button[aria-pressed=true]{border-color:var(--ag-accent);background:var(--ag-soft);color:var(--ag-accent);font-weight:600}
+.ag-rate{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:12px;padding-top:12px;border-top:1px solid var(--ag-line)}
+.ag-rate .ag-input{flex:1 1 220px;min-width:0}
+.agents-app .ag-rate .ag-cmp{margin-left:auto}
+.ag-trial{margin-top:18px;display:grid;gap:10px;padding:18px 20px}
+.ag-trial .ag-actions{align-items:center}
+#ag-trial-out:empty{display:none}
+#ag-trial-out h3{margin:4px 0 6px;font-family:var(--ag-serif);font-weight:500}
+.ag-recent{margin-top:8px}
+.agents-app .ag-recent button{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:5px 12px;font-size:12.5px}
+.ag-panel{margin-block:16px;padding:18px 20px}
+.ag-panel-top{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:8px}
+.ag-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}
+.ag-cols h3{margin:4px 0;font-family:var(--ag-serif);font-weight:500}
+.ag-pre{white-space:pre-wrap;overflow-wrap:anywhere;margin:6px 0 0;padding:12px;border-radius:10px;background:var(--ag-soft);font:13px/1.55 inherit;max-height:360px;overflow:auto}
+.ag-only{border-left:3px solid var(--ag-accent);padding-left:10px;margin:8px 0}
+.ag-only .ag-tag{display:inline-block;margin-bottom:4px}
+.ag-history{margin:0;padding:0;list-style:none;display:grid;gap:8px}
+.ag-history summary{cursor:pointer;font-weight:600}
+.ag-history button{margin-top:8px}
