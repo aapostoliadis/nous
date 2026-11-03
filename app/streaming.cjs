@@ -29,9 +29,13 @@ function partialAnswer(source){
   return '';
 }
 function streamError(message){const e=Error(message);e.status=502;throw e;}
-async function readProviderStream(response,mode,onProgress,signal){
+// onProgress receives the partial answer string, or a {step} object naming what the model is doing now.
+// Search sources are reported through onSource(url,title) when the provider's web search tool runs.
+async function readProviderStream(response,mode,onProgress,signal,onSource=()=>{}){
   if(!response.body)streamError('The provider returned no response stream. No changes were made.');
-  let buffer='',output='',previous='',finished=false,reason='',done=false,total=0,lastUpdate=0;
+  let buffer='',output='',previous='',finished=false,reason='',done=false,total=0,lastUpdate=0,searched=false,lastStep='';
+  const blocks={},step=s=>{if(s!==lastStep){lastStep=s;onProgress({step:s});}};
+  const query=json=>{try{const q=JSON.parse(json||'{}').query;return typeof q==='string'&&q.trim()?q.trim().slice(0,120):'';}catch{return '';}};
   const decoder=new TextDecoder();
   function event(block){
     const data=block.split('\n').filter(l=>l.startsWith('data:')).map(l=>l.slice(5).trimStart()).join('\n');
@@ -42,15 +46,31 @@ async function readProviderStream(response,mode,onProgress,signal){
     let delta='';
     if(mode==='responses'){
       if(e.type==='response.output_text.delta')delta=e.delta||'';
+      if(e.type==='response.web_search_call.in_progress'||e.type==='response.web_search_call.searching')step('Searching the web');
+      if(e.type==='response.output_item.done'&&e.item?.type==='web_search_call'&&e.item.action?.query)step(`Searched “${String(e.item.action.query).slice(0,120)}”`);
+      if(e.type==='response.output_item.added'&&e.item?.type==='message')step('Writing');
+      if(e.type==='response.output_text.annotation.added'&&e.annotation?.type==='url_citation')onSource(e.annotation.url,e.annotation.title);
       if(e.type==='response.completed')finished=e.response?.status==='completed';
     }else if(mode==='chat'){
       const choice=e.choices?.find(c=>c.index===0);delta=choice?.delta?.content||'';
       if(choice?.finish_reason)reason=choice.finish_reason;
     }else{
       if(e.type==='content_block_delta'&&e.delta?.type==='text_delta')delta=e.delta.text||'';
-      if(e.type==='content_block_start'&&e.content_block?.type==='text')delta=e.content_block.text||'';
+      const b=e.content_block;
+      if(e.type==='content_block_start'&&b){
+        blocks[e.index]={type:b.type,json:''};
+        if(b.type==='server_tool_use'){searched=true;step('Searching the web');}
+        if(b.type==='web_search_tool_result'){searched=true;if(Array.isArray(b.content)){b.content.forEach(r=>onSource(r?.url,r?.title));step(`Reading ${b.content.length} source${b.content.length===1?'':'s'}`);}}
+        if(b.type==='text'){
+          // Text before a search is the model thinking aloud; only what follows the last search is the deliverable.
+          if(searched){output='';previous='';searched=false;}
+          step('Writing');delta=b.text||'';
+        }
+      }
+      if(e.type==='content_block_delta'&&e.delta?.type==='input_json_delta'&&blocks[e.index])blocks[e.index].json+=e.delta.partial_json||'';
+      if(e.type==='content_block_stop'&&blocks[e.index]?.type==='server_tool_use'){const q=query(blocks[e.index].json);if(q)step(`Searching “${q}”`);}
       if(e.type==='message_delta')reason=e.delta?.stop_reason||reason;
-      if(e.type==='message_stop')finished=reason==='end_turn';
+      if(e.type==='message_stop'){finished=reason==='end_turn';if(reason==='pause_turn')streamError('The web search ran long and the model paused before answering. Try the run again with a narrower request.');}
     }
     if(typeof delta==='string'&&delta){
       output+=delta;if(output.length>180000)streamError('The response exceeded the supported size. No changes were made.');
