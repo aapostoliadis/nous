@@ -43,7 +43,7 @@ async function handler(req,res){
         res.flushHeaders();
         const emit=data=>{if(!res.destroyed)res.write(JSON.stringify(data)+'\n');};
         emit({type:'start'});
-        const result=await handlers[url](input,fetch,controller.signal,answer=>emit({type:'answer',answer}));
+        const result=await handlers[url](input,fetch,controller.signal,p=>emit(typeof p==='string'?{type:'answer',answer:p}:{type:'step',step:String(p?.step||'').slice(0,160)}));
         emit({type:'complete',result});res.end();
       }else json(res,200,await handlers[url](input,fetch,controller.signal));
     } catch(e) { if(!res.destroyed){const error=e.status?e.message:controller.signal.aborted?'Request timed out or was cancelled. No changes were made.':'Could not reach the provider. No changes were made.';if(res.headersSent)res.end(JSON.stringify({type:'error',error})+'\n');else json(res,e.status||502,{error});} }

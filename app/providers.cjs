@@ -104,7 +104,14 @@ function validateResult(value,workspace) {
 }
 // One provider round trip shared by workspace asks and agents: validates the chosen model, sends the
 // request (streamed when onProgress is given) and returns the raw JSON text the model produced.
-async function complete(input,{system,content,schema:format,name},fetchImpl=fetch,signal,onProgress) {
+// Web search keeps sources found by the provider's own search tool: http(s) links only, deduplicated.
+function addSource(list,url,title){
+  if(typeof url!=='string'||!/^https?:\/\//i.test(url)||url.length>2000||list.length>=12||list.some(s=>s.url===url))return;
+  list.push({url,title:typeof title==='string'&&title.trim()?title.trim().slice(0,200):url.replace(/^https?:\/\/(www\.)?/i,'').split('/')[0]});
+}
+// Search adds commentary and citation-split text blocks around the JSON, so keep the outermost object.
+const jsonText=t=>{const a=t.indexOf('{'),b=t.lastIndexOf('}');return a>=0&&b>a?t.slice(a,b+1):t;};
+async function complete(input,{system,content,schema:format,name,web=false},fetchImpl=fetch,signal,onProgress) {
   const p=providers[input?.provider]; if(!p) fail('Choose ChatGPT or Claude.');
   const env=config(), cred=credentials(input.provider,input.key);
   const model=input.model||env[p.modelEnv]||p.model;
@@ -113,7 +120,10 @@ async function complete(input,{system,content,schema:format,name},fetchImpl=fetc
   const chosen=catalog.models.find(m=>m.id===model);
   if(!chosen)fail('This model is not in your available text models. Refresh the model list and choose again.');
   if(!['responses','chat','messages'].includes(chosen.mode))fail('Open Audio tools to use this specialist model.');
-  system+=chosen.structured?'':` Return only JSON matching this schema, with no markdown fences: ${JSON.stringify(format)}`;
+  if(web&&chosen.mode==='chat')fail('Web search needs a newer model. Choose another model or turn web search off for this agent.');
+  // Claude's structured outputs cannot be combined with search citations, so web runs ask for JSON in the prompt instead.
+  const structured=chosen.structured&&!(web&&input.provider==='anthropic');
+  system+=structured?'':` Return only JSON matching this schema, with no markdown fences: ${JSON.stringify(format)}`;
   const headers={'content-type':'application/json'};
   let body,url=p.url;
   if(input.provider==='openai') {
@@ -121,11 +131,11 @@ async function complete(input,{system,content,schema:format,name},fetchImpl=fetc
     if(chosen.mode==='chat'){
       url='https://api.openai.com/v1/chat/completions';
       body={model,store:false,messages:[{role:'system',content:system},{role:'user',content}],max_completion_tokens:4096};
-    }else body={model,store:false,instructions:system,input:content,max_output_tokens:5000,...(chosen.structured?{text:{format:{type:'json_schema',name,strict:true,schema:format}}}:{})};
+    }else body={model,store:false,instructions:system,input:content,max_output_tokens:5000,...(web&&{tools:[{type:'web_search'}]}),...(structured?{text:{format:{type:'json_schema',name,strict:true,schema:format}}}:{})};
   } else {
     headers['x-api-key']=cred.key;headers['anthropic-version']='2023-06-01';
     if(cred.workspace) headers['anthropic-workspace-id']=cred.workspace;
-    body={model,max_tokens:Math.min(5000,chosen.maxTokens||5000),system,messages:[{role:'user',content}],...(chosen.structured?{output_config:{format:{type:'json_schema',schema:format}}}:{})};
+    body={model,max_tokens:Math.min(5000,chosen.maxTokens||5000),system,messages:[{role:'user',content}],...(web&&{tools:[{type:/^claude-(opus|sonnet)-(4-[6-9]|5)|^claude-fable/.test(model)?'web_search_20260209':'web_search_20250305',name:'web_search',max_uses:5}]}),...(structured?{output_config:{format:{type:'json_schema',schema:format}}}:{})};
   }
   if(onProgress)body.stream=true;
   const response=await fetchImpl(url,{method:'POST',headers,body:JSON.stringify(body),signal});
@@ -135,9 +145,9 @@ async function complete(input,{system,content,schema:format,name},fetchImpl=fetc
     const errors={400:'The selected model could not accept this workspace request. Choose another model; no changes were made.',401:'The API key was not accepted. Update the connection credentials.',403:'This project does not have access to the selected model.',429:'The provider reports a quota or rate limit. Check API credits and limits, then try again.',404:'The selected model is unavailable. Refresh the model list and choose another.'};
     fail(errors[response.status]||`The provider could not complete this request (HTTP ${response.status}).`,response.status===429?429:502);
   }
-  let output;
+  let output;const sources=[];
   if(onProgress){
-    output=await require('./streaming.cjs').readProviderStream(response,chosen.mode,onProgress,signal);
+    output=await require('./streaming.cjs').readProviderStream(response,chosen.mode,onProgress,signal,(url,title)=>addSource(sources,url,title));
   }else{
   const data=await response.json();
   if(input.provider==='openai') {
@@ -146,15 +156,21 @@ async function complete(input,{system,content,schema:format,name},fetchImpl=fetc
       output=data.choices[0].message?.content||'';
     }else{
     if(data.status!=='completed') fail('The model stopped before finishing. No changes were made.',502);
-    output=(data.output||[]).flatMap(x=>x.content||[]).filter(x=>x.type==='output_text').map(x=>x.text).join('');
+    const parts=(data.output||[]).flatMap(x=>x.content||[]).filter(x=>x.type==='output_text');
+    for(const a of parts.flatMap(x=>x.annotations||[]))if(a.type==='url_citation')addSource(sources,a.url,a.title);
+    output=parts.map(x=>x.text).join('');
     }
   } else {
+    if(data.stop_reason==='pause_turn')fail('The web search ran long and the model paused before answering. Try the run again with a narrower request.',502);
     if(data.stop_reason!=='end_turn') fail('The model stopped before finishing. No changes were made.',502);
-    output=(data.content||[]).filter(x=>x.type==='text').map(x=>x.text).join('');
+    const blocks=data.content||[],last=blocks.map(x=>x.type).lastIndexOf('web_search_tool_result');
+    for(const b of blocks)if(b.type==='web_search_tool_result'&&Array.isArray(b.content))for(const r of b.content)addSource(sources,r.url,r.title);
+    // Text written before the last search is the model thinking aloud; the deliverable follows it.
+    output=blocks.slice(last+1).filter(x=>x.type==='text').map(x=>x.text).join('');
   }
   }
-  let parsed; try{parsed=JSON.parse(output);}catch{fail('The model did not return a usable answer. No changes were made.',502);}
-  return {parsed,provider:input.provider,providerLabel:p.label,model,time:new Date().toISOString()};
+  let parsed; try{parsed=JSON.parse(web?jsonText(output):output);}catch{fail('The model did not return a usable answer. No changes were made.',502);}
+  return {parsed,provider:input.provider,providerLabel:p.label,model,time:new Date().toISOString(),...(web&&{sources})};
 }
 async function ask(input,fetchImpl=fetch,signal,onProgress) {
   if(!providers[input?.provider]) fail('Choose ChatGPT or Claude.');
