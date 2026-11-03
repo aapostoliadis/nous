@@ -53,7 +53,7 @@ body.mode-agents .agents-app{display:grid}
 .ag-head h1{margin:8px 0 6px;font:500 clamp(30px,4vw,44px)/1.1 var(--ag-serif);letter-spacing:-.02em}
 .ag-head h1 em,.ag-preview h2 em{color:inherit;font-style:normal}
 .ag-lede{margin:0;max-width:62ch;color:var(--ag-muted);font-size:15px;line-height:1.55}
-.ag-section{margin:32px 0 12px}
+.ag-section{margin-block:32px 12px}
 .ag-card{background:var(--ag-card);border:1px solid var(--ag-card-line);border-radius:var(--ag-radius);box-shadow:var(--ag-shadow);backdrop-filter:var(--ag-blur)}
 .ag-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:16px}
 .ag-stack{display:flex;flex-direction:column;gap:14px}
@@ -308,5 +308,36 @@ body.mode-agents .agents-app{display:grid}
 .ag-tag-urgent{color:#b42318;border-color:currentColor}
 .ag-tag-drafted{color:#067647;border-color:currentColor}
 .ag-tag-uncertain{color:#b54708;border-color:currentColor}
-@media (prefers-color-scheme:dark){.ag-tag-urgent{color:#fda29b}.ag-tag-drafted{color:#75e0a7}.ag-tag-uncertain{color:#fec84b}}
+[data-mode=dark] .ag-tag-urgent{color:#fda29b}[data-mode=dark] .ag-tag-drafted{color:#75e0a7}[data-mode=dark] .ag-tag-uncertain{color:#fec84b}
 .ag-sources{margin:8px 0 12px;padding-left:20px;font-size:13px;line-height:1.6;overflow-wrap:anywhere}
+
+/* Templates gallery: filter chips, tinted illustration band, icon tile, "You get" line. */
+.ag-tpl-filter{margin-block:-6px 20px}
+.ag-tpl-filter button span{margin-left:4px;color:var(--ag-muted);font-variant-numeric:tabular-nums}
+.ag-tpl-filter button[aria-pressed="true"]{background:var(--ag-cta);border-color:var(--ag-cta);color:var(--ag-accent-ink)}
+.ag-tpl-filter button[aria-pressed="true"] span{color:inherit;opacity:.8}
+.ag-tpl-grid{grid-template-columns:repeat(auto-fill,minmax(270px,1fr))}
+.ag-tpl{--t-1:oklch(.6 .13 var(--ag-hue));--t-2:oklch(.82 .08 var(--ag-hue));--t-3:oklch(.92 .04 var(--ag-hue));--t-bg:oklch(.965 .022 var(--ag-hue));
+  display:flex;flex-direction:column;overflow:hidden;transition:transform .2s ease-out,box-shadow .2s ease-out}
+.ag-tpl:hover{transform:translateY(-2px)}
+.ag-band{height:88px;background:var(--t-bg);border-bottom:1px solid var(--ag-card-line)}
+.ag-band svg{display:block;width:100%;height:100%}
+.ag-band .b0{fill:var(--t-bg)}.ag-band .b1{fill:var(--t-1)}.ag-band .b2{fill:var(--t-2)}.ag-band .b3{fill:var(--t-3)}
+.ag-band .s0{fill:none;stroke:var(--t-bg);stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
+.ag-band .s1{fill:none;stroke:var(--t-1);stroke-width:4;stroke-linecap:round}
+.ag-tpl-body{display:flex;flex-direction:column;gap:10px;flex:1;padding:18px 20px 20px}
+.ag-tpl-head{display:flex;align-items:center;gap:12px;margin-top:-40px}
+.ag-tpl-icon{display:grid;place-items:center;width:46px;height:46px;flex-shrink:0;border-radius:14px;background:var(--ag-card);border:1px solid var(--ag-card-line);color:var(--t-1);box-shadow:var(--ag-shadow)}
+.ag-tpl-icon .ag-ico{width:24px;height:24px}
+.ag-tpl-head>div{padding-top:30px;min-width:0}
+.ag-tpl-cat{font:600 11px/1.4 var(--ag-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--ag-muted)}
+.ag-tpl h2{margin:2px 0 0;font:500 19px/1.25 var(--ag-serif)}
+.ag-tpl p{margin:0;color:var(--ag-muted);font-size:14px;line-height:1.5}
+.ag-tpl>.ag-tpl-body>p:first-of-type{flex:1}
+.ag-tpl .ag-tpl-gets{padding:8px 12px;border-radius:10px;background:var(--t-bg);color:var(--ag-ink);font-size:13px}
+.ag-tpl-gets strong{margin-right:4px;font:600 11px/1.4 var(--ag-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--ag-muted)}
+.ag-tag-plain{background:none;border:1px solid var(--ag-line);color:var(--ag-muted)}
+.ag-chips .ag-ico{width:16px;height:16px;margin-right:6px;vertical-align:-3px;color:oklch(.55 .13 var(--ag-hue))}
+[data-mode=dark] .ag-tpl{--t-1:oklch(.78 .11 var(--ag-hue));--t-2:oklch(.5 .08 var(--ag-hue));--t-3:oklch(.36 .05 var(--ag-hue));--t-bg:oklch(.28 .035 var(--ag-hue))}
+[data-mode=dark] .ag-chips .ag-ico{color:oklch(.78 .11 var(--ag-hue))}
+@media (prefers-reduced-motion:reduce){.ag-tpl{transition:none}.ag-tpl:hover{transform:none}}
