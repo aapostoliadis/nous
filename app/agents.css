@@ -341,3 +341,5 @@ body.mode-agents .agents-app{display:grid}
 [data-mode=dark] .ag-tpl{--t-1:oklch(.78 .11 var(--ag-hue));--t-2:oklch(.5 .08 var(--ag-hue));--t-3:oklch(.36 .05 var(--ag-hue));--t-bg:oklch(.28 .035 var(--ag-hue))}
 [data-mode=dark] .ag-chips .ag-ico{color:oklch(.78 .11 var(--ag-hue))}
 @media (prefers-reduced-motion:reduce){.ag-tpl{transition:none}.ag-tpl:hover{transform:none}}
+/* Print: only the Agents page, at full length; the workspace behind it and the tab bar stay off paper. */
+@media print{body.mode-agents{overflow:visible}body.mode-agents>:not(.agents-app){display:none!important}body.mode-agents .agents-app{position:static;display:block}.agents-app .ag-side{display:none}.agents-app .ag-main{overflow:visible;padding:0}}
