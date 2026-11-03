@@ -277,6 +277,11 @@ body.mode-agents .agents-app{display:grid}
 .ag-schedule{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:0 0 12px;color:var(--ag-muted);font-size:14px}
 .ag-schedule select,.ag-schedule input{width:auto}
 .ag-schedule .ag-note{flex-basis:100%;margin:0}
+.ag-schfill{flex-basis:100%;display:flex;flex-wrap:wrap;gap:8px 12px;margin:4px 0 0;padding:0;border:0}
+.ag-schfill legend{padding:0;margin-bottom:6px}
+.ag-schfill label{display:flex;flex-direction:column;gap:4px;flex:1 1 180px}
+.ag-schfill .ag-input{width:100%}
+.ag-note.ag-warn{color:var(--amber,#9a6a12)}
 .ag-bulk.ag-picked{justify-content:flex-start;align-items:center;flex-wrap:wrap;gap:8px}
 .ag-picked span{font-weight:600;margin-right:4px}
 .ag-keys{border:1px solid var(--ag-line,#d9d4c7);border-radius:12px;padding:20px 24px;background:var(--ag-card,#fff);color:var(--ag-ink,#1f1d1a);max-width:min(26rem,calc(100vw - 32px))}
