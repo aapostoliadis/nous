@@ -526,6 +526,8 @@
   // The streamed text so far goes into the stored record, so an interrupted run keeps its partial output.
   addEventListener('beforeunload',e=>{if(running){e.preventDefault();e.returnValue='';}});
   addEventListener('pagehide',()=>{if(running){Object.assign(running.record,{answer:running.answer,beat:0});persist();}});
+  // Print the whole report: open collapsed sections (full result, original answer) for paper, then close them again.
+  let printOpened=[];addEventListener('beforeprint',()=>{printOpened=[...root.querySelectorAll('details:not([open])')];for(const d of printOpened)d.open=true;});addEventListener('afterprint',()=>{for(const d of printOpened)d.open=false;printOpened=[];});
   addEventListener('popstate',()=>{const r=parseRoute();if(r){if(r.view!==view||(r.id??openId)!==openId){shown=10;rfind='';}view=r.view;openId=r.id??openId;setMode('agents',false);focusHead();}else if(document.body.classList.contains('mode-agents'))setMode('workspace',false);});
   let mode='agents';try{mode=localStorage.getItem(MODE)||'agents';}catch{}
   const start=parseRoute();if(start){view=start.view;openId=start.id;mode='agents';}
