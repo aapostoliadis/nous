@@ -65,7 +65,10 @@ if(!process.argv.includes('--fixture')){
       assert.equal((await request('/api/providers',{headers:{'Sec-Fetch-Site':'cross-site'}})).status,403);
       const linked=await request('/',{headers:{'Sec-Fetch-Site':'cross-site'}});
       assert.equal(linked.status,200,'A link from another site must open the page');
-      assert.equal(linked.headers['content-security-policy'],"frame-ancestors 'none'");assert.equal(linked.headers['x-frame-options'],'DENY');
+      const csp=linked.headers['content-security-policy']||'';
+      for(const part of ["default-src 'self'","script-src 'self'","object-src 'none'","base-uri 'none'","frame-ancestors 'none'"])assert(csp.includes(part),'CSP must include '+part);
+      assert(!/script-src[^;]*unsafe-inline/.test(csp),'Scripts must not allow inline code');
+      assert.equal(linked.headers['x-frame-options'],'DENY');
       assert.equal((await request('/api/providers',{headers:{'Sec-Fetch-Site':'cross-site','Sec-Fetch-Mode':'navigate'}})).status,403);
       assert.equal((await request('/app.js',{headers:{'Sec-Fetch-Site':'cross-site','Sec-Fetch-Mode':'no-cors'}})).status,403);
       const status=await request('/api/providers',{headers:{Origin:origin}});assert.equal(status.status,200);assert.equal(JSON.parse(status.body).hosted,hosted);
