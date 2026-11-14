@@ -551,4 +551,6 @@
     if(k==='r'){const b=card?.querySelector('[data-review]');if(b){e.preventDefault();b.click();}}});
   setTimeout(tick,3000);setInterval(tick,60000);
   const models=$('#ai-model');if(models)new MutationObserver(()=>{if(!document.body.classList.contains('mode-agents')||view==='wizard'||running)return;const m=document.activeElement?.dataset?.mirror;draw();if(m)root.querySelector(`[data-mirror="${m}"]`)?.focus();}).observe(models,{childList:true,subtree:true,attributes:true,attributeFilter:['disabled']});
+  // Test seam: tests/verify-agents-client.cjs sets window.__agentsTest before loading this file. It is never set in the app.
+  if(window.__agentsTest)Object.assign(window.__agentsTest,{md,trimRuns,withParent,db:()=>db});
 })();
