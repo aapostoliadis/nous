@@ -33,7 +33,7 @@ function streamError(message){const e=Error(message);e.status=502;throw e;}
 // Search sources are reported through onSource(url,title) when the provider's web search tool runs.
 async function readProviderStream(response,mode,onProgress,signal,onSource=()=>{}){
   if(!response.body)streamError('The provider returned no response stream. No changes were made.');
-  let buffer='',output='',previous='',finished=false,reason='',done=false,total=0,lastUpdate=0,searched=false,lastStep='';
+  let buffer='',output='',previous='',finished=false,reason='',done=false,total=0,parsedAt=0,lastParse=0,searched=false,lastStep='';
   const blocks={},step=s=>{if(s!==lastStep){lastStep=s;onProgress({step:s});}};
   const query=json=>{try{const q=JSON.parse(json||'{}').query;return typeof q==='string'&&q.trim()?q.trim().slice(0,120):'';}catch{return '';}};
   const decoder=new TextDecoder();
@@ -63,7 +63,7 @@ async function readProviderStream(response,mode,onProgress,signal,onSource=()=>{
         if(b.type==='web_search_tool_result'){searched=true;if(Array.isArray(b.content)){b.content.forEach(r=>onSource(r?.url,r?.title));step(`Reading ${b.content.length} source${b.content.length===1?'':'s'}`);}}
         if(b.type==='text'){
           // Text before a search is the model thinking aloud; only what follows the last search is the deliverable.
-          if(searched){output='';previous='';searched=false;}
+          if(searched){output='';previous='';parsedAt=0;searched=false;}
           step('Writing');delta=b.text||'';
         }
       }
@@ -74,8 +74,12 @@ async function readProviderStream(response,mode,onProgress,signal,onSource=()=>{
     }
     if(typeof delta==='string'&&delta){
       output+=delta;if(output.length>180000)streamError('The response exceeded the supported size. No changes were made.');
-      const answer=partialAnswer(output).slice(0,20000);
-      if(answer!==previous&&(answer.length-previous.length>=48||Date.now()-lastUpdate>=120)){previous=answer;lastUpdate=Date.now();onProgress(answer);}
+      // Parse only when enough new text has arrived or enough time has passed. Parsing on every fragment re-reads the whole output each time.
+      if(output.length-parsedAt>=48||Date.now()-lastParse>=120){
+        parsedAt=output.length;lastParse=Date.now();
+        const answer=partialAnswer(output).slice(0,20000);
+        if(answer!==previous){previous=answer;onProgress(answer);}
+      }
     }
   }
   for await(const chunk of response.body){
