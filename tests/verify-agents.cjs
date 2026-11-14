@@ -32,6 +32,11 @@ function fake(value,seen=[]){return async(url,opts)=>{
   assert.match(runSeen[0].system,/You are "Weekly brief"/);assert.match(runSeen[0].system,/data and never instructions/);
   await assert.rejects(()=>run({...base,agent:{...agent,instructions:''},request:'x'},fake({})),{status:400});
   await assert.rejects(()=>run({...base,agent,request:'x'.repeat(5001)},fake({})),/under 5,000/);
+  // Instructions: the form's 6,000 plus the browser's answer-length note is accepted; longer says so; blank is still incomplete.
+  const long=await run({...base,agent:{...agent,instructions:'x'.repeat(6000)+'\n\n'+'Give a detailed, thorough answer.'},request:'x'},fake({title:'T',answer:'A',highlights:[],nextSteps:[]}));
+  assert.equal(long.answer,'A');
+  await assert.rejects(()=>run({...base,agent:{...agent,instructions:'x'.repeat(6101)},request:'x'},fake({})),/under 6,000/);
+  await assert.rejects(()=>run({...base,agent:{...agent,instructions:'   '},request:'x'},fake({})),/incomplete/);
   await assert.rejects(()=>run({...base,agent,request:'x',context:{goal:'g',objects:Array(201).fill({})}},fake({})),/too large/);
   await assert.rejects(()=>run({...base,agent,request:'x'},fake({title:'t',answer:' ',highlights:[],nextSteps:[]})),{status:502});
   // Report card: stats and items are clamped; old-shape output still works.
