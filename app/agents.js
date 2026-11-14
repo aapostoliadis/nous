@@ -72,7 +72,8 @@
     b.type='button';b.textContent='Undo';b.setAttribute('aria-keyshortcuts','Control+Z Meta+Z');b.onmouseenter=b.onfocus=hold;b.onmouseleave=b.onblur=later;b.onclick=()=>{b.onblur=null;b.remove();restore();persist();toast('Restored.');};t.append(' ',b);later();};
   const unreviewed=()=>db.runs.filter(r=>r.status==='done'&&!r.reviewed);
   // Keeps history to 100 runs by dropping the oldest ones that need nothing; a result still waiting for review is never dropped.
-  const trimRuns=()=>{let over=db.runs.length-100;for(let i=db.runs.length-1;i>=0&&over>0;i--)if(!(db.runs[i].status==='done'&&!db.runs[i].reviewed)){db.runs.splice(i,1);over--;}};
+  // Keeps the list near 100. Unreviewed results are never dropped (#16), and neither is a run still in flight: its record must exist when the answer arrives.
+  const trimRuns=()=>{let over=db.runs.length-100;for(let i=db.runs.length-1;i>=0&&over>0;i--){const r=db.runs[i];if(r.status!=='running'&&!(r.status==='done'&&!r.reviewed)){db.runs.splice(i,1);over--;}}};
   const hue=s=>[...String(s)].reduce((h,c)=>(h*31+c.charCodeAt(0))%360,7);
   const avatar=(a,size='')=>`<span class="ag-avatar ${size}" style="--ag-hue:${hue(a.name||'agent')}" aria-hidden="true">${esc((a.name||'?').trim()[0]?.toUpperCase()||'✦')}</span>`;
   const ago=t=>{const s=(Date.now()-new Date(t))/1000;return s<60?'just now':s<3600?`${Math.floor(s/60)} min ago`:s<86400?`${Math.floor(s/3600)} h ago`:new Date(t).toLocaleDateString();};
