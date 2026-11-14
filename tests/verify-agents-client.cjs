@@ -135,5 +135,5 @@ const idShape=/^[A-Za-z0-9_-]{1,64}$/;
   assert.equal(h.t.db().runs.length,0,'a scheduled run another tab already started was started again');
 
   for(const line of skipped)console.log(line);
-  console.log('PASS agents client: Markdown escaping, run trimming, follow-up text, import and stored ids, changes from another tab and claimed schedules passed.');
+  console.log('PASS agents client: Markdown escaping, run trimming, follow-up text, the improved-instructions cap, import and stored ids, changes from another tab and claimed schedules passed.');
 })().catch(e=>{console.error(e);process.exitCode=1;});
