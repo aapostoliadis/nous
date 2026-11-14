@@ -151,7 +151,10 @@
   const schText=a=>(a.starter||'').replace(BLANK,(m,x)=>a.schedule.fill?.[x]?.trim()||m);
   // The latest scheduled slot at or before now.
   function slot(a){const s=a.schedule,[h,m]=s.time.split(':').map(Number),d=new Date();d.setHours(h,m,0,0);if(d>Date.now())d.setDate(d.getDate()-1);if(s.day!=='daily')while(d.getDay()!==+s.day)d.setDate(d.getDate()-1);return +d;}
-  function tick(){if(running||!navigator.onLine||!pick().ok)return;const a=listed().find(a=>a.schedule&&schReady(a)&&slot(a)>(a.ranAt||0));if(!a)return;a.ranAt=Date.now();persist();fill(schText(a)).then(r=>run(a,r.trim(),undefined,undefined,{scheduled:true}));}
+  function tick(){if(running||!navigator.onLine||!pick().ok)return;const a=listed().find(a=>a.schedule&&schReady(a)&&slot(a)>(a.ranAt||0));if(!a)return;
+    // Two tabs run this timer. Read the stored claim again, so a schedule another tab just started is not started twice.
+    try{const s=JSON.parse(localStorage.getItem(KEY))?.agents?.find(x=>x.id===a.id);if(s&&slot(a)<=(s.ranAt||0)){a.ranAt=s.ranAt;return;}}catch{}
+    a.ranAt=Date.now();persist();fill(schText(a)).then(r=>run(a,r.trim(),undefined,undefined,{scheduled:true}));}
   // Three or more "Not quite" notes point to the existing improve flow.
   const offer=a=>{const n=feedback(a).filter(r=>r.note?.trim()).length;return n>=3&&improving?.id!==a.id?`<div class="ag-card ag-offer"><p>${n} notes say “Not quite”. Want a suggested change to the instructions? You review it before it is applied.</p><button type="button" class="ag-primary" data-act="improve">Suggest a change</button></div>`:'';};
   function runCard(r,{agent=true,level}={}){
@@ -536,6 +539,9 @@
   // The streamed text so far goes into the stored record, so an interrupted run keeps its partial output.
   addEventListener('beforeunload',e=>{if(running){e.preventDefault();e.returnValue='';}});
   addEventListener('pagehide',()=>{if(running){Object.assign(running.record,{answer:running.answer,beat:0});persist();}});
+  // Another tab saved. Take its copy so this tab does not overwrite it with stale data on its next save.
+  // A run in progress here stays: its record is put back, because the other tab's copy has only the last heartbeat of it.
+  addEventListener('storage',e=>{if(e.key!==KEY||e.newValue==null)return;let next;try{next=JSON.parse(e.newValue);}catch{return;}if(!Array.isArray(next?.agents)||!Array.isArray(next?.runs))return;if(running?.record){const i=next.runs.findIndex(r=>r.id===running.record.id);if(i<0)next.runs.unshift(running.record);else next.runs[i]=running.record;}if(!next.drafts||typeof next.drafts!=='object'||Array.isArray(next.drafts))next.drafts={};if(view==='wizard')next.draft=w;else w=next.draft;db=next;drafts=db.drafts;if(document.body.classList.contains('mode-agents')&&view!=='wizard'&&!running)draw();});
   // Print the whole report: open collapsed sections (full result, original answer) for paper, then close them again.
   let printOpened=[];addEventListener('beforeprint',()=>{printOpened=[...root.querySelectorAll('details:not([open])')];for(const d of printOpened)d.open=true;});addEventListener('afterprint',()=>{for(const d of printOpened)d.open=false;printOpened=[];});
   addEventListener('popstate',()=>{const r=parseRoute();if(r){if(r.view!==view||(r.id??openId)!==openId){shown=10;rfind='';}view=r.view;openId=r.id??openId;setMode('agents',false);focusHead();}else if(document.body.classList.contains('mode-agents'))setMode('workspace',false);});
@@ -552,5 +558,5 @@
   setTimeout(tick,3000);setInterval(tick,60000);
   const models=$('#ai-model');if(models)new MutationObserver(()=>{if(!document.body.classList.contains('mode-agents')||view==='wizard'||running)return;const m=document.activeElement?.dataset?.mirror;draw();if(m)root.querySelector(`[data-mirror="${m}"]`)?.focus();}).observe(models,{childList:true,subtree:true,attributes:true,attributeFilter:['disabled']});
   // Test seam: tests/verify-agents-client.cjs sets window.__agentsTest before loading this file. It is never set in the app.
-  if(window.__agentsTest)Object.assign(window.__agentsTest,{md,trimRuns,withParent,db:()=>db});
+  if(window.__agentsTest)Object.assign(window.__agentsTest,{md,trimRuns,withParent,tick,db:()=>db});
 })();

@@ -8,8 +8,9 @@ const has={ids:source.includes('const safeId='),running:/const trimRuns=.*r\.sta
 const skipped=[];
 const needs=(ok,label,plan,fn)=>ok?fn():skipped.push(`Skipped: ${label} (plan ${plan} not applied)`);
 
-function load(stored){
-  const toasts=[],handlers={},storage=new Map();
+// With a provider, the page looks as if a key and model are chosen, so the schedule timer is allowed to start runs.
+function load(stored,{provider}={}){
+  const toasts=[],handlers={},winHandlers={},storage=new Map();
   if(stored)storage.set(KEY,JSON.stringify(stored));
   const record=(name,fn)=>{(handlers[name]??=[]).push(fn);};
   const noop=()=>{};
@@ -19,18 +20,20 @@ function load(stored){
       addEventListener:record,closest:()=>null,querySelector:()=>element(),querySelectorAll:()=>[]};
     return new Proxy(own,{get:(o,k)=>k in o?o[k]:typeof k==='symbol'?undefined:noop,set:(o,k,v)=>{o[k]=v;return true;}});
   };
-  const document={title:'Nous',body:element(),documentElement:element(),activeElement:null,getElementById:()=>element(),querySelector:()=>element(),querySelectorAll:()=>[],createElement:()=>element(),addEventListener:record};
+  const document={title:'Nous',body:element(),documentElement:element(),activeElement:null,getElementById:()=>element(),querySelector:s=>Object.assign(element(),provider&&{'#ai-provider':{value:'anthropic'},'#ai-model':{value:'claude-test'}}[s]),querySelectorAll:()=>[],createElement:()=>element(),addEventListener:record};
   const ctx={document,toast:m=>toasts.push(m),toastTimer:0,$:s=>document.querySelector(s),state:{},save:noop,render:noop,setMode:noop,current:()=>null,
     esc:v=>String(v ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),
     localStorage:{getItem:k=>storage.has(k)?storage.get(k):null,setItem:(k,v)=>{storage.set(k,String(v));},removeItem:k=>{storage.delete(k);}},
     crypto:require('node:crypto').webcrypto,MutationObserver:class{observe(){}disconnect(){}},setTimeout:()=>0,setInterval:()=>0,
-    location:{hash:'',search:'',pathname:'/',href:'http://localhost/'},addEventListener:noop,
+    location:{hash:'',search:'',pathname:'/',href:'http://localhost/'},navigator:{onLine:true},addEventListener:(name,fn)=>{(winHandlers[name]??=[]).push(fn);},
     fetch:async()=>{throw Error('The agents client test never calls a provider.');}};
   ctx.window=ctx;ctx.__agentsTest={};
   vm.runInNewContext(source,ctx);
   // Calls every handler the script registered for this event, on the document or on an element (the Agents root listens for change).
   const fire=(name,event)=>{for(const fn of handlers[name]||[])fn(event);};
-  return {t:ctx.__agentsTest,toasts,storage,fire};
+  // Window-level events, such as the storage event another tab's save causes.
+  const fireWindow=(name,event)=>{for(const fn of winHandlers[name]||[])fn(event);};
+  return {t:ctx.__agentsTest,toasts,storage,fire,fireWindow};
 }
 const settle=()=>new Promise(r=>setImmediate(r));
 const agent=(over={})=>({id:'agent-1',name:'Weekly brief',description:'Summarises the week.',instructions:'Write a brief.',version:1,...over});
@@ -97,6 +100,25 @@ const idShape=/^[A-Za-z0-9_-]{1,64}$/;
   await importFile(h,null);
   assert.ok(h.toasts.some(m=>/not a Nous agents export/.test(m)),'a file that is not an agents export gave no message');
 
+  // Two tabs: each holds its own copy and saves the whole of it, so a tab must take in what another tab saved.
+  const other=agent({id:'agent-2',name:'Other tab'});
+  h=load({agents:[agent()],runs:[],draft:null});
+  h.fireWindow('storage',{key:KEY,newValue:JSON.stringify({agents:[agent(),other],runs:[],draft:null})});
+  assert.equal(h.t.db().agents.length,2,'an agent made in another tab is missing here, and the next save here would erase it');
+  assert.equal(typeof h.t.db().drafts,'object','unsent request drafts broke after another tab saved');
+  h=load({agents:[agent()],runs:[],draft:null});
+  for(const event of [{key:KEY,newValue:'not json'},{key:KEY,newValue:'{"agents":5}'},{key:'some-other-key',newValue:JSON.stringify({agents:[],runs:[]})},{key:KEY,newValue:null}]){
+    h.fireWindow('storage',event);
+    assert.equal(h.t.db().agents.length,1,'a damaged or unrelated storage event wiped the agents in this tab');
+  }
+  // A schedule another tab has already started must not start here too: the person would pay for the run twice.
+  const due=agent({starter:'Go',schedule:{time:'00:00',day:'daily'}}),claim=Date.now();
+  h=load({agents:[due],runs:[],draft:null},{provider:true});
+  h.storage.set(KEY,JSON.stringify({agents:[{...due,ranAt:claim}],runs:[],draft:null}));
+  h.t.tick();await settle();
+  assert.equal(JSON.parse(h.storage.get(KEY)).agents[0].ranAt,claim,'this tab overwrote a schedule another tab had already claimed');
+  assert.equal(h.t.db().runs.length,0,'a scheduled run another tab already started was started again');
+
   for(const line of skipped)console.log(line);
-  console.log('PASS agents client: Markdown escaping, run trimming, follow-up text, import and stored ids passed.');
+  console.log('PASS agents client: Markdown escaping, run trimming, follow-up text, import and stored ids, changes from another tab and claimed schedules passed.');
 })().catch(e=>{console.error(e);process.exitCode=1;});
