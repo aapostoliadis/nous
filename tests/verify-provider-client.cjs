@@ -1,5 +1,5 @@
-const vm=require('node:vm'),fs=require('node:fs'),assert=require('node:assert/strict');
-const source=fs.readFileSync('app/connections.js','utf8');
+const vm=require('node:vm'),fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
+const source=fs.readFileSync(path.join(__dirname,'../app/connections.js'),'utf8');
 const tick=()=>new Promise(r=>setImmediate(r));
 async function fixture(stored={}){
  const elements=new Map();const element=id=>elements.get(id)||elements.set(id,{value:'',dataset:{},textContent:'',hidden:false,disabled:false,setAttribute(){},scrollIntoView(){},focus(){},selectedOptions:[],classList:{toggle(){},contains:()=>false},addEventListener(){},contains:()=>false,get parentElement(){return element(id+':parent')}}).get(id);

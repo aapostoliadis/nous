@@ -1,4 +1,4 @@
-const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),assert=require('node:assert/strict');
 function setup({answer='Spoken words.',error=false,denied=false}={}){
  const els={};class E{constructor(){this.attrs={};this.dataset={};this.value='';this.hidden=false;this.disabled=false;this.listeners={};this.maxLength=5000;this.selectionStart=0;this.selectionEnd=0;}setAttribute(k,v){this.attrs[k]=v;}getAttribute(k){return this.attrs[k]||null;}addEventListener(k,v){this.listeners[k]=v;}querySelector(){return els.send;}dispatchEvent(){}focus(){this.focused=true;}setSelectionRange(a,b){this.selectionStart=a;this.selectionEnd=b;}}
  for(const id of ['command','command-form','ask-microphone','dictation-feedback','dictation-status','dictation-cancel','dictation-retry','dictation-overflow','dictation-orb','dictation-elapsed','audio-tools','dialog','send'])els[id]=new E();
@@ -7,7 +7,7 @@ function setup({answer='Spoken words.',error=false,denied=false}={}){
  class MR{static isTypeSupported(){return true;}constructor(){this.state='inactive';}start(){this.state='recording';queueMicrotask(()=>{this.onstart?.();this.ondataavailable?.({data:new Blob(['opening words '])});});}stop(){this.state='inactive';queueMicrotask(()=>{order.push('final data');this.ondataavailable?.({data:new Blob(['final words'])});this.onstop?.();});}}
  class FR{readAsDataURL(blob){blob.arrayBuffer().then(b=>{this.result='data:audio/webm;base64,'+Buffer.from(b).toString('base64');this.onload();});}}
  const ctx={document:{querySelector:s=>els[s.slice(1)],addEventListener(){}},navigator:{mediaDevices:{getUserMedia:async()=>{if(denied)throw Object.assign(Error(),{name:'NotAllowedError'});return stream;}}},MediaRecorder:MR,FileReader:FR,Blob,AbortController,Event,MutationObserver:class{observe(){}},setTimeout:(fn,ms)=>{durations.push(ms);return setTimeout(fn,ms)},clearTimeout,setInterval,clearInterval,fetch:async(url,opts)=>{if(url.includes('models')){catalogCalls++;return {ok:true,json:async()=>({models:[{id:'gpt-4o-mini-transcribe',mode:'transcription'}]})}};posts++;payload=JSON.parse(opts.body);if(pending)await pending;if(opts.signal.aborted)throw Object.assign(Error(),{name:'AbortError'});return {ok:!fetchError,json:async()=>fetchError?{error:'Try again'}:{text:answer}};}};
- ctx.window={MediaRecorder:MR,addEventListener(){}};vm.runInNewContext(fs.readFileSync('app/dictation.js','utf8'),ctx);
+ ctx.window={MediaRecorder:MR,addEventListener(){}};vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../app/dictation.js'),'utf8'),ctx);
  return {els,order,durations,get catalogCalls(){return catalogCalls},get payload(){return payload},get stops(){return stops},get posts(){return posts},setError(v){fetchError=v;},delay(p){pending=p}};
 }
 const tick=()=>new Promise(r=>setTimeout(r,460));
