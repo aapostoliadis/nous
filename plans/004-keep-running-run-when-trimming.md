@@ -107,7 +107,7 @@ No permanent test is added here, because `app/agents.js` has no test harness yet
 - [ ] Step 1's command printed `100 done` before the fix and prints `101 running` after it.
 - [ ] Step 3's command prints `100 running 98`.
 - [ ] `npm test` exits 0.
-- [ ] `grep -c "r.status!=='running'&&" app/agents.js` prints `1`.
+- [ ] `grep -c "const r=db.runs\[i\];if(r.status!=='running'&&" app/agents.js` prints `1`. (The shorter string `r.status!=='running'&&` also appears in two unrelated filters, so it prints `3`.)
 - [ ] `git status --short` lists only `app/agents.js` (and `plans/README.md`).
 - [ ] This plan's row in `plans/README.md` is updated.
 

@@ -126,7 +126,7 @@ Some of these describe behaviour that only exists after another plan lands:
 | Follow-up stays within 5,000 with a 4,700-character request | 003 |
 | Bad ids replaced at import and at load | 001 |
 
-Check whether each fix is present (`grep -c "const safeId=" app/agents.js`, `grep -c "r.status!=='running'&&" app/agents.js`, `grep -c "for(const quote of \[500,100\])" app/agents.js`). For a fix that is **not** present, still write the test, wrap it so it is skipped, and print one line such as `Skipped: running-run trimming (plan 004 not applied)`. Do not leave a failing test and do not delete the case.
+Check whether each fix is present (`grep -c "const safeId=" app/agents.js`, `grep -c "const r=db.runs\[i\];if(r.status!=='running'&&" app/agents.js`, `grep -c "for(const quote of \[500,100\])" app/agents.js`). For a fix that is **not** present, still write the test, wrap it so it is skipped, and print one line such as `Skipped: running-run trimming (plan 004 not applied)`. Do not leave a failing test and do not delete the case.
 
 **Verify:** `node tests/verify-agents-client.cjs` → exit 0, one line ending `passed.`, plus any `Skipped:` lines. `npm test` → exit 0, and the new file appears in its output.
 
