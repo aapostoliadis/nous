@@ -24,7 +24,7 @@ function load(stored,{provider}={}){
   const ctx={document,toast:m=>toasts.push(m),toastTimer:0,$:s=>document.querySelector(s),state:{},save:noop,render:noop,setMode:noop,current:()=>null,
     esc:v=>String(v ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),
     localStorage:{getItem:k=>storage.has(k)?storage.get(k):null,setItem:(k,v)=>{storage.set(k,String(v));},removeItem:k=>{storage.delete(k);}},
-    crypto:require('node:crypto').webcrypto,MutationObserver:class{observe(){}disconnect(){}},setTimeout:()=>0,setInterval:()=>0,
+    crypto:require('node:crypto').webcrypto,MutationObserver:class{observe(){}disconnect(){}},AbortController,setTimeout:()=>0,setInterval:()=>0,
     location:{hash:'',search:'',pathname:'/',href:'http://localhost/'},navigator:{onLine:true},addEventListener:(name,fn)=>{(winHandlers[name]??=[]).push(fn);},
     fetch:async()=>{throw Error('The agents client test never calls a provider.');}};
   ctx.window=ctx;ctx.__agentsTest={};
@@ -39,11 +39,15 @@ const settle=()=>new Promise(r=>setImmediate(r));
 const agent=(over={})=>({id:'agent-1',name:'Weekly brief',description:'Summarises the week.',instructions:'Write a brief.',version:1,...over});
 const done=(n,reviewed)=>({id:'run-'+n,agentId:'agent-1',status:'done',reviewed,n,answer:'A',title:'T',time:new Date(0).toISOString()});
 const importFile=async(h,agents)=>{h.fire('change',{target:{id:'ag-import',dataset:{},value:'x',files:[{text:async()=>JSON.stringify({agents})}]}});await settle();await settle();};
+// A click on a button inside the Agents root, as the root's click listener sees it.
+const click=(h,dataset)=>h.fire('click',{target:{closest:s=>s==='button'?{dataset,disabled:false,getAttribute:()=>null}:null}});
+const noted=(n,note)=>({...done(n,true),rating:'down',note});
+const improve=async(h)=>{click(h,{open:'agent-1'});click(h,{act:'improve'});await settle();return h.t.improving().next;};
 const idShape=/^[A-Za-z0-9_-]{1,64}$/;
 
 (async()=>{
   let h=load();
-  for(const name of ['md','trimRuns','withParent'])assert.equal(typeof h.t[name],'function',`the test seam does not expose ${name}`);
+  for(const name of ['md','trimRuns','withParent','improving'])assert.equal(typeof h.t[name],'function',`the test seam does not expose ${name}`);
   const {md,withParent}=h.t;
 
   // Markdown renderer: model output becomes HTML, so anything that survives as markup can run in the person's page.
@@ -78,6 +82,17 @@ const idShape=/^[A-Za-z0-9_-]{1,64}$/;
     assert.ok(out.length<=5000,'a long follow-up request the form allowed is rejected by the server');
     assert.ok(out.includes(long),'part of the follow-up request the person typed was cut');
   });
+
+  // Improve instructions without a provider: notes are appended, and the server rejects instructions over 6,000 characters,
+  // so an uncapped result would stop an agent the person never edited by hand.
+  const longText='i'.repeat(5900);
+  h=load({agents:[agent({instructions:longText})],runs:[noted(1,'n'.repeat(400)),noted(2,'m'.repeat(400))],draft:null});
+  let next=await improve(h);
+  assert.ok(next.length<=6000,'improved instructions built from long notes are over 6,000 characters, so the server would reject the agent');
+  assert.ok(next.startsWith(longText),'the cap on improved instructions cut the instructions the agent already had');
+  h=load({agents:[agent()],runs:[noted(1,'Shorter, please.')],draft:null});
+  next=await improve(h);
+  assert.ok(next.startsWith('Write a brief.')&&next.endsWith('- Shorter, please.'),'short improved instructions lost the note the person wrote');
 
   // Import and stored ids: ids are written into HTML attributes, so a crafted agents file must not be able to carry markup.
   const bad='x"><img src=x onerror=1>';
