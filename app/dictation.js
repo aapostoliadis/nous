@@ -34,7 +34,7 @@
       // Discover models after capture, so a slow connection cannot lose opening words.
       if(!model){
         if(window.providerReady?.('openai')===false)throw Error('Add your OpenAI API key in Connections.');
-        const r=await fetch('/api/models?provider=openai',{headers:window.providerHeaders?.('openai')||{},signal:controller.signal});const data=await r.json();if(!r.ok)throw Error(data.error||'Connect OpenAI to transcribe your speech.');
+        const r=await fetch('/api/models?provider=openai',{headers:window.providerHeaders?.('openai')||{},signal:controller.signal});const data=await r.json().catch(()=>null);if(!r.ok||!data)throw Error(data?.error||'Connect OpenAI to transcribe your speech.');
         if(token!==generation)return;
         const models=data.models.filter(m=>m.mode==='transcription'&&!m.id.includes('diarize'));
         model=models.find(m=>m.id==='gpt-4o-mini-transcribe')?.id||models[0]?.id;
@@ -43,7 +43,7 @@
       const file={name:'dictation.'+(recording.type.includes('mp4')?'mp4':recording.type.includes('ogg')?'ogg':'webm'),data:await encoded(recording)};
       if(token!==generation)return;
       const response=await fetch('/api/audio',{method:'POST',headers:{'Content-Type':'application/json',...window.providerHeaders?.('openai')},signal:controller.signal,body:JSON.stringify({model,file})});
-      const result=await response.json();if(!response.ok)throw Error(result.error||'Speech could not be transcribed. Retry the recording.');
+      const result=await response.json().catch(()=>null);if(!response.ok||!result)throw Error(result?.error||'Speech could not be transcribed. Retry the recording.');
       if(token!==generation)return;
       const text=typeof result.text==='string'?result.text.trim():'';if(!text)throw Error('No speech was detected. Please record again.');
       // Insert at the original caret only if the user has not edited the field meanwhile.

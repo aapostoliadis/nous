@@ -51,7 +51,7 @@
     if(first&&answer){panel.querySelector('[role=status]').textContent='Writing your answer…';panel.querySelector('.source-note').textContent='Answer in progress. Workspace changes appear when complete.';connection.textContent='Writing…';}
   }
   async function readAnswer(response,signal){
-    if(!response.ok){const data=await response.json();throw Error(data.error||'The provider could not finish the request.');}
+    if(!response.ok){const data=await response.json().catch(()=>({}));throw Error(data.error||'The provider could not finish the request.');}
     if(!response.headers?.get('content-type')?.includes('application/x-ndjson'))return response.json();
     const reader=response.body.getReader(),decoder=new TextDecoder();let buffer='',result=null,total=0;
     function event(line){
@@ -91,7 +91,7 @@
     modelSelect.innerHTML='<option value="">Loading models…</option>';
     try {
       let catalog=modelCatalogs.get(provider);
-      if(force||!catalog){const response=await fetch('/api/models?provider='+encodeURIComponent(provider)+(force?'&refresh=1':''),{headers:window.providerHeaders(provider)});const data=await response.json();if(!response.ok)throw Error(data.error||'Models unavailable');catalog=data;modelCatalogs.set(provider,catalog);}
+      if(force||!catalog){const response=await fetch('/api/models?provider='+encodeURIComponent(provider)+(force?'&refresh=1':''),{headers:window.providerHeaders(provider)});const data=await response.json().catch(()=>null);if(!response.ok||!data)throw Error(data?.error||'Models unavailable');catalog=data;modelCatalogs.set(provider,catalog);}
       if(request!==modelRequest)return;
       const wanted=chosenModels[provider]||catalog.defaultModel;
       fillModels(provider,catalog,wanted);
