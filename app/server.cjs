@@ -33,8 +33,9 @@ async function handler(req,res){
     const timeout=setTimeout(()=>controller.abort(),90000);
     res.on('close',()=>{if(!res.writableEnded)controller.abort();});
     try {
-      let body='',size=0;
-      for await(const chunk of req){size+=chunk.length;if(size>(url==='/api/audio'?18000000:350000)){const e=new Error('Workspace exceeds the supported request size.');e.status=413;throw e;}body+=chunk;}
+      const chunks=[];let size=0;
+      for await(const chunk of req){size+=chunk.length;if(size>(url==='/api/audio'?18000000:350000)){const e=new Error('Workspace exceeds the supported request size.');e.status=413;throw e;}chunks.push(chunk);}
+      const body=Buffer.concat(chunks).toString('utf8'); // Decode once: a character split across chunks must not become U+FFFD.
       let input;try{input=JSON.parse(body);}catch{}
       if(!input||typeof input!=='object'||Array.isArray(input)){const e=new Error('Invalid JSON request.');e.status=400;throw e;}
       input.key=req.headers['x-provider-key']; // The user's own key arrives as a header only, never in the body or URL.

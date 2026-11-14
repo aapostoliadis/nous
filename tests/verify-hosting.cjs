@@ -10,14 +10,14 @@ if(!process.argv.includes('--fixture')){
   }
 }else{
   const hosted=process.argv.at(-1)==='hosted';
-  let asks=0,modelKey;
+  let asks=0,modelKey,audioInput;
   const userKey='sk-fixture-user-key-0123456789';
   const providerPath=require.resolve('../app/providers.cjs');
   require.cache[providerPath]={id:providerPath,filename:providerPath,loaded:true,exports:{
     status:()=>[{id:'openai',configured:false}],
     listModels:async(provider,opts)=>{modelKey=opts.key;return {models:[]};},
     ask:async(input,fetch,signal,emit)=>{asks++;assert.equal(input.prompt,'Hello');assert.equal(input.key,userKey,'Key must come from the header, not the body');emit?.('First part');await new Promise(r=>setTimeout(r,30));return {answer:'First part, complete.'};},
-    audioRequest:async()=>({ok:true})
+    audioRequest:async input=>{audioInput=input;return {ok:true};}
   }};
   const originalListen=http.Server.prototype.listen;
   http.Server.prototype.listen=()=>{throw Error('Import must not open a listening socket');};
@@ -42,6 +42,14 @@ if(!process.argv.includes('--fixture')){
         });req.on('error',reject);req.end(options.body);
       });
     }
+    // Sends the body as two chunks so a multi-byte character can straddle the boundary.
+    function splitPost(url,headers,parts){
+      return new Promise((resolve,reject)=>{
+        const req=http.request({host:'127.0.0.1',port:server.address().port,path:url,method:'POST',headers:{Host:host,...headers}},res=>{
+          let body='';res.on('data',chunk=>body+=chunk);res.on('end',()=>resolve({status:res.statusCode,body}));
+        });req.on('error',reject);req.setNoDelay(true);req.write(parts[0]);setTimeout(()=>req.end(parts[1]),50);
+      });
+    }
     try{
       const home=await request('/');assert.equal(home.status,200);assert.match(home.body,/<html/i);
       const assets=[...home.body.matchAll(/(?:src|href)="([^"#]+\.(?:js|css|svg|woff2)(?:\?[^"#]*)?)"/g)].map(m=>m[1]).filter(p=>!p.includes('://'));
@@ -64,6 +72,9 @@ if(!process.argv.includes('--fixture')){
       assert.equal((await request('/api/connections/anthropic',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json'},body:'{"key":"fixture-only"}'})).status,405,'Server-side key saving is removed');
       assert.equal((await request('/api/models?provider=openai',{headers:{Origin:origin,'X-Provider-Key':userKey}})).status,200);assert.equal(modelKey,userKey);
       for(const body of ['null','[]','"text"'])assert.equal((await request('/api/ask',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json'},body})).status,400,body);
+      const utf='Ελληνικά 😀 naïve',raw=Buffer.from(JSON.stringify({text:utf})),cut=raw.indexOf(Buffer.from('λ'))+1; // one byte into a two-byte character
+      const split=await splitPost('/api/audio',{Origin:origin,'Content-Type':'application/json'},[raw.subarray(0,cut),raw.subarray(cut)]);
+      assert.equal(split.status,200,split.body);assert.equal(audioInput.text,utf,'A character split across chunks must survive');
       const stream=await request('/api/ask',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json','X-Provider-Key':userKey},body:'{"prompt":"Hello","stream":true,"key":"from-body-ignored"}'});
       assert.equal(stream.status,200);assert.equal(asks,1);
       const events=stream.body.trim().split('\n').map(JSON.parse);assert.deepEqual(events.map(e=>e.type),['start','answer','complete']);
