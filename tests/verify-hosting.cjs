@@ -59,13 +59,22 @@ if(!process.argv.includes('--fixture')){
       assert.ok(cssUrls.size>=3,'Fonts and images referenced from CSS must be checked');
       for(const url of cssUrls)assert.equal((await request(url)).status,200,url); // A missing texture or font would otherwise pass unnoticed.
       assert.equal((await request('/',{method:'HEAD'})).body,'');
+      const first=await request('/app.js');
+      assert.equal(first.status,200);assert.match(first.headers.etag||'',/^"[A-Za-z0-9_-]+"$/,'Static files need an ETag so the browser can revalidate');
+      const same=await request('/app.js',{headers:{'If-None-Match':first.headers.etag}});
+      assert.equal(same.status,304);assert.equal(same.body,'','A 304 must not carry a body');assert.equal(same.headers.etag,first.headers.etag);
+      const weak=await request('/app.js',{headers:{'If-None-Match':'"other", W/'+first.headers.etag}});assert.equal(weak.status,304,'A list and a weak validator must match');
+      const stale=await request('/app.js',{headers:{'If-None-Match':'"not-the-current-version"'}});assert.equal(stale.status,200);assert(stale.body.length>0);
       for(const privatePath of ['/.env.local','/server.cjs','/providers.cjs','/vercel.json','/../.env.local'])assert.equal((await request(privatePath)).status,404,privatePath);
       assert.equal((await request('/',{headers:{Host:'attacker.example'}})).status,403);
       assert.equal((await request('/api/providers',{headers:{Origin:'https://attacker.example'}})).status,403);
       assert.equal((await request('/api/providers',{headers:{'Sec-Fetch-Site':'cross-site'}})).status,403);
       const linked=await request('/',{headers:{'Sec-Fetch-Site':'cross-site'}});
       assert.equal(linked.status,200,'A link from another site must open the page');
-      assert.equal(linked.headers['content-security-policy'],"frame-ancestors 'none'");assert.equal(linked.headers['x-frame-options'],'DENY');
+      const csp=linked.headers['content-security-policy']||'';
+      for(const part of ["default-src 'self'","script-src 'self'","object-src 'none'","base-uri 'none'","frame-ancestors 'none'"])assert(csp.includes(part),'CSP must include '+part);
+      assert(!/script-src[^;]*unsafe-inline/.test(csp),'Scripts must not allow inline code');
+      assert.equal(linked.headers['x-frame-options'],'DENY');
       assert.equal((await request('/api/providers',{headers:{'Sec-Fetch-Site':'cross-site','Sec-Fetch-Mode':'navigate'}})).status,403);
       assert.equal((await request('/app.js',{headers:{'Sec-Fetch-Site':'cross-site','Sec-Fetch-Mode':'no-cors'}})).status,403);
       const status=await request('/api/providers',{headers:{Origin:origin}});assert.equal(status.status,200);assert.equal(JSON.parse(status.body).hosted,hosted);

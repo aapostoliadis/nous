@@ -1,8 +1,11 @@
 const http = require('node:http');
 const fs = require('node:fs');
 const path = require('node:path');
+const crypto=require('node:crypto');
 const {status,ask,listModels,audioRequest} = require('./providers.cjs');
 const agents = require('./agents.cjs');
+// Blocks injected script and off-origin requests; keys live in this page's storage. Inline styles are allowed because the UI uses style attributes.
+const CSP="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob: data:; font-src 'self'; connect-src 'self'; worker-src 'self' blob:; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'";
 const handlers = {'/api/ask':ask,'/api/audio':audioRequest,'/api/agents/design':agents.design,'/api/agents/run':agents.run};
 const root = __dirname;
 const port = Number(process.env.PORT || 4179);
@@ -58,7 +61,10 @@ async function handler(req,res){
   const file=path.resolve(root,relative);
   if(!file.startsWith(root+path.sep)) return json(res,403,{error:'Invalid path.'});
   let data;try{data=await fs.promises.readFile(file);}catch{return json(res,404,{error:'Not found.'});}
-  res.setHeader('Content-Type',({'html':'text/html; charset=utf-8','js':'text/javascript','css':'text/css','svg':'image/svg+xml','png':'image/png','webp':'image/webp','woff2':'font/woff2'})[path.extname(file).slice(1)]);res.setHeader('Cache-Control','no-cache');res.setHeader('X-Content-Type-Options','nosniff');if(relative==='index.html'){res.setHeader('Content-Security-Policy',"frame-ancestors 'none'");res.setHeader('X-Frame-Options','DENY');}res.end(req.method==='HEAD'?undefined:data);
+  res.setHeader('Content-Type',({'html':'text/html; charset=utf-8','js':'text/javascript','css':'text/css','svg':'image/svg+xml','png':'image/png','webp':'image/webp','woff2':'font/woff2'})[path.extname(file).slice(1)]);res.setHeader('Cache-Control','no-cache');res.setHeader('X-Content-Type-Options','nosniff');const etag='"'+crypto.createHash('sha1').update(data).digest('base64url')+'"';res.setHeader('ETag',etag);if(relative==='index.html'){res.setHeader('Content-Security-Policy',CSP);res.setHeader('X-Frame-Options','DENY');}
+  // no-cache makes the browser revalidate every load; this lets an unchanged file cost a 304 instead of its full body.
+  if(String(req.headers['if-none-match']||'').split(',').map(s=>s.trim().replace(/^W\//,'')).includes(etag)){res.statusCode=304;return res.end();}
+  res.end(req.method==='HEAD'?undefined:data);
 }
 module.exports=handler;
 if(require.main===module){
