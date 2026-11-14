@@ -1,13 +1,13 @@
-// Styles: Light and Warm ink. Loaded in <head> so the style is set before
+// Styles: Light, Warm ink and Tech Innovation. Loaded in <head> so the style is set before
 // first paint. The choice in the menu is saved per device; without one the
-// style is Light. Picking System follows the system setting live.
+// style is Tech Innovation. Picking System follows the system setting live.
 (()=>{
   const KEY='nous-theme',root=document.documentElement,system=matchMedia('(prefers-color-scheme: dark)'),still=matchMedia('(prefers-reduced-motion: reduce)');
-  const THEMES={light:'Light',warm:'Warm ink'},DARK='warm';
+  const THEMES={light:'Light',warm:'Warm ink',tech:'Tech Innovation'},DARK='tech';
   // 'dark' was saved by the first dark mode; Graphite and Forest were removed.
-  // Each now opens in Warm ink.
+  // Each now opens in Tech Innovation.
   const LEGACY_DARK=['dark','graphite','forest'];
-  const choice=()=>{try{const v=localStorage.getItem(KEY);return LEGACY_DARK.includes(v)?DARK:v==='system'||v in THEMES?v:'light'}catch{return 'light'}};
+  const choice=()=>{try{const v=localStorage.getItem(KEY);return LEGACY_DARK.includes(v)?DARK:v==='system'||v in THEMES?v:DARK}catch{return DARK}};
   const fromSystem=()=>system.matches?DARK:'light';
   const resolve=c=>c==='system'?fromSystem():c;
   const apply=theme=>{

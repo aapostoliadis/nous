@@ -5,7 +5,7 @@
    compound values, and overrides whose removal would change the dark look.
    Base rules prefixed :where([data-mode=dark]) carry no specificity for the
    prefix, so the light :hover/.active/.claim rules (already tokenised) win.
-   theme.js sets data-theme (light or warm) on <html>, plus data-mode="dark"
+   theme.js sets data-theme (light, warm or tech) on <html>, plus data-mode="dark"
    for Warm ink, which uses every rule below. */
 /* Shared by dark styles: status colours and aliases for the
    variables the light stylesheets use. Each dark style sets its surfaces. */
@@ -19,6 +19,17 @@
   --accent:#9cc4a4;--accent-strong:#bcdcc2;--accent-bg:#232a22;--accent-line:#3c4a3d;
   --solid:#ece8df;--on-solid:#161512;--solid-hover:#9cc4a4;
   --gray-bg:#2e2b25;--blue-bg:#1f2630;--dash:#6e6250}
+/* Tech Innovation: dark gray, electric blue fills, cyan accent, DejaVu Sans. Blue (#0066ff) is 3.45:1 on the
+   background, so it is used for filled controls only; cyan carries accent text. This is the default style. The fonts load only when it is active. */
+@font-face{font-family:'DejaVu Sans';font-style:normal;font-weight:400;font-display:swap;src:url('assets/fonts/dejavu-sans-latin-400-normal.woff2') format('woff2')}
+@font-face{font-family:'DejaVu Sans';font-style:normal;font-weight:700;font-display:swap;src:url('assets/fonts/dejavu-sans-latin-700-normal.woff2') format('woff2')}
+:root[data-theme=tech]{
+  --bg:#1e1e1e;--surface:#252525;--raised:#2d2d2d;--raised-2:#363636;--line:#3a3a3a;--line-strong:#6b6b6b;
+  --ink:#ffffff;--muted:#b8b8b8;--subtle:#9a9a9a;
+  --accent:#00ffff;--accent-strong:#80ffff;--accent-bg:#0a2a3a;--accent-line:#0a5a70;
+  --solid:#0066ff;--on-solid:#ffffff;--solid-hover:#0052cc;
+  --gray-bg:#363636;--blue-bg:#0f2547;--dash:#5c5c5c;
+  --sans:'DejaVu Sans',Verdana,Arial,sans-serif;--serif:'DejaVu Sans',Verdana,Arial,sans-serif}
 [data-mode=dark] body:before{opacity:.03}
 [data-mode=dark] .nous-artwork{filter:brightness(2.3) saturate(.75)}
 [data-mode=dark] button:hover{color:var(--accent)}
@@ -148,3 +159,8 @@
 /* Light rules in ux-refinements.css whose :not() chains outrank the generic dark overrides above. */
 [data-mode=dark] .state-strip span:not(.current):not(.rejected):not(.state-exit){color:var(--muted)}
 [data-mode=dark] .audio-toolbar button{border-color:var(--line-strong)}
+/* Tech Innovation overrides. */
+[data-theme=tech] :is(h1,h2,h3){font-weight:700}
+[data-theme=tech] .suggestions>span{font-family:var(--sans)}
+[data-theme=tech] .provider-controls select{font-family:var(--sans)}
+[data-theme=tech] .map-mode button[aria-pressed=true]{background:var(--solid)}
