@@ -46,6 +46,21 @@ function response(text){const bytes=Buffer.from(text);return {ok:true,body:(asyn
  const oSteps=[];
  await readProviderStream(response([{type:'response.web_search_call.searching'},{type:'response.output_item.done',item:{type:'web_search_call',action:{query:'q'}}},{type:'response.output_item.added',item:{type:'message'}},{type:'response.output_text.delta',delta:output},{type:'response.completed',response:{status:'completed'}}].map(sse).join('')),'responses',p=>{if(typeof p==='object')oSteps.push(p.step);});
  assert.deepEqual(oSteps,['Searching the web','Searched “q”','Writing']);
+ // A long answer arriving one character at a time must not be re-parsed from the start for every character.
+ {
+  const long=JSON.stringify({title:'T',answer:'word '.repeat(12000),references:[],objects:[]});
+  let text='';for(const ch of long)text+='data: '+JSON.stringify({type:'response.output_text.delta',delta:ch})+'\n\n';
+  text+='data: '+JSON.stringify({type:'response.completed',response:{status:'completed'}})+'\n\n';
+  const bytes=Buffer.from(text);
+  const body=(async function*(){for(let i=0;i<bytes.length;i+=65536)yield bytes.subarray(i,i+65536);})();
+  let calls=0,last='';const started=Date.now();
+  const result=await readProviderStream({body},'responses',p=>{if(typeof p==='string'){calls++;last=p;}});
+  const took=Date.now()-started;
+  assert(calls>10,'Progress must still be reported while streaming');
+  assert(last.startsWith('word word'),'Progress must carry the answer text');
+  assert(took<3000,`A 60,000-character answer in 1-character fragments took ${took} ms; the partial answer is being re-parsed too often`);
+  assert(result);
+ }
  console.log('PASS streaming web search: step events, sources, pre-search text dropped, paused searches.');
  console.log('PASS streaming: all three provider adapters, partial text before completion, split UTF-8/SSE/JSON escapes, top-level answer only, cancellation, interrupted streams and final validation. No provider calls.');
 })().catch(e=>{console.error(e);process.exitCode=1});
