@@ -35,7 +35,9 @@ async function design(input,fetchImpl=fetch,signal){
 }
 async function run(input,fetchImpl=fetch,signal,onProgress){
   const a=input?.agent;
-  if(!a||!boundedString(a.name,80)||!a.name.trim()||!boundedString(a.description,300)||!boundedString(a.instructions,6000)||!a.instructions.trim())fail('This agent is incomplete. Open it and finish its identity.');
+  if(!a||!boundedString(a.name,80)||!a.name.trim()||!boundedString(a.description,300)||typeof a.instructions!=='string'||!a.instructions.trim())fail('This agent is incomplete. Open it and finish its identity.');
+  // The form caps instructions at 6,000; the browser may append a short answer-length note, so allow a little more.
+  if(a.instructions.length>6100)fail('Keep the instructions under 6,000 characters.');
   if(!boundedString(input.request,5000))fail('Keep the request under 5,000 characters.');
   let context=null;
   if(input.context!==undefined){
