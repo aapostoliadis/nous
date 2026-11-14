@@ -42,6 +42,20 @@ Vercel's deployment, branch and production domains are accepted through its syst
 - Browser storage for workspace data and IndexedDB for saved audio.
 - Desktop layout fits 1280 × 1024 without page scrolling; long content scrolls within panels.
 
+## Agents
+
+An agent is a set of instructions you save once and run whenever you need it. Open **Agents** beside Ask, describe the job in a sentence and Nous drafts the agent for you to edit.
+
+- Run an agent on a request, attach a file, then follow up on the result.
+- **Run and compare** or **Try another model** to see the same request answered by a different model.
+- **Improve instructions** rewrites the agent from a result you were not happy with.
+- Turn on web search for an agent that needs current facts. Without it, nothing leaves this browser except the request to your chosen provider.
+- Give an agent a schedule. Schedules run from the open page, so they only fire while Nous is open in a browser tab.
+- **Save to workspace** adds a result to your workspace. **Mark reviewed** and **Archive** keep the list tidy.
+- Save an agent as a template, and use **Export agents** and **Import agents** to move agents to another browser.
+
+Agents and their results are stored in this browser. Clearing site data removes them, so export the agents you want to keep.
+
 ## Validation
 
 ```sh
@@ -53,9 +67,9 @@ Tests use synthetic provider responses and microphone fixtures. They do not make
 ## Project structure
 
 - `app/`: runnable frontend and local Node server.
-- `tests/`: isolated provider, streaming, request lifecycle and dictation checks.
+- `tests/`: isolated provider, streaming, request lifecycle, dictation, agent and hosting checks.
 - `visuals/`: article screenshots and captions from earlier design stages; they do not show every subsequent UI refinement.
-- `docs/`: visual adaptation notes and the UX review.
+- `docs/`: visual adaptation notes, the UX review and the Agents user test script.
 
 The seed project and research evidence are fictional. AI output is saved as draft material requiring review. The map's core connectors are illustrative; additional objects appear as cards. This is an interaction prototype, not a multi-user production service.
 
