@@ -10,7 +10,7 @@ const needs=(ok,label,plan,fn)=>ok?fn():skipped.push(`Skipped: ${label} (plan ${
 
 // With a provider, the page looks as if a key and model are chosen, so the schedule timer is allowed to start runs.
 function load(stored,{provider}={}){
-  const toasts=[],handlers={},winHandlers={},storage=new Map();
+  const toasts=[],focused=[],handlers={},winHandlers={},storage=new Map();
   if(stored)storage.set(KEY,JSON.stringify(stored));
   const record=(name,fn)=>{(handlers[name]??=[]).push(fn);};
   const noop=()=>{};
@@ -20,7 +20,9 @@ function load(stored,{provider}={}){
       addEventListener:record,closest:()=>null,querySelector:()=>element(),querySelectorAll:()=>[]};
     return new Proxy(own,{get:(o,k)=>k in o?o[k]:typeof k==='symbol'?undefined:noop,set:(o,k,v)=>{o[k]=v;return true;}});
   };
-  const document={title:'Nous',body:element(),documentElement:element(),activeElement:null,getElementById:()=>element(),querySelector:s=>Object.assign(element(),provider&&{'#ai-provider':{value:'anthropic'},'#ai-model':{value:'claude-test'}}[s]),querySelectorAll:()=>[],createElement:()=>element(),addEventListener:record};
+  // The "✦ Agents" button records what each focus call was given; every other selector gets a fresh permissive element.
+  const toggle=Object.assign(element(),{focus:options=>{focused.push(options);}});
+  const document={title:'Nous',body:element(),documentElement:element(),activeElement:null,getElementById:()=>element(),querySelector:s=>s==='#agents-toggle'?toggle:Object.assign(element(),provider&&{'#ai-provider':{value:'anthropic'},'#ai-model':{value:'claude-test'}}[s]),querySelectorAll:()=>[],createElement:()=>element(),addEventListener:record};
   const ctx={document,toast:m=>toasts.push(m),toastTimer:0,$:s=>document.querySelector(s),state:{},save:noop,render:noop,setMode:noop,current:()=>null,
     esc:v=>String(v ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),
     localStorage:{getItem:k=>storage.has(k)?storage.get(k):null,setItem:(k,v)=>{storage.set(k,String(v));},removeItem:k=>{storage.delete(k);}},
@@ -33,7 +35,7 @@ function load(stored,{provider}={}){
   const fire=(name,event)=>{for(const fn of handlers[name]||[])fn(event);};
   // Window-level events, such as the storage event another tab's save causes.
   const fireWindow=(name,event)=>{for(const fn of winHandlers[name]||[])fn(event);};
-  return {t:ctx.__agentsTest,toasts,storage,fire,fireWindow};
+  return {t:ctx.__agentsTest,toasts,focused,storage,fire,fireWindow};
 }
 const settle=()=>new Promise(r=>setImmediate(r));
 const agent=(over={})=>({id:'agent-1',name:'Weekly brief',description:'Summarises the week.',instructions:'Write a brief.',version:1,...over});
@@ -47,7 +49,7 @@ const idShape=/^[A-Za-z0-9_-]{1,64}$/;
 
 (async()=>{
   let h=load();
-  for(const name of ['md','trimRuns','withParent','improving'])assert.equal(typeof h.t[name],'function',`the test seam does not expose ${name}`);
+  for(const name of ['md','trimRuns','withParent','improving','setMode'])assert.equal(typeof h.t[name],'function',`the test seam does not expose ${name}`);
   const {md,withParent}=h.t;
 
   // Markdown renderer: model output becomes HTML, so anything that survives as markup can run in the person's page.
@@ -94,6 +96,11 @@ const idShape=/^[A-Za-z0-9_-]{1,64}$/;
   next=await improve(h);
   assert.ok(next.startsWith('Write a brief.')&&next.endsWith('- Shorter, please.'),'short improved instructions lost the note the person wrote');
 
+  // Return to the workspace: focus goes back to the Agents button at the top, and a scroll to it would lose the person's place in the workspace.
+  h=load();h.t.setMode('workspace',false);
+  assert.equal(h.focused.length,1,'returning to the workspace did not focus the Agents button exactly once');
+  assert.equal(h.focused[0]?.preventScroll,true,'returning to the workspace focuses the Agents button without preventScroll, so the page jumps to the top');
+
   // Import and stored ids: ids are written into HTML attributes, so a crafted agents file must not be able to carry markup.
   const bad='x"><img src=x onerror=1>';
   needs(has.ids,'bad ids replaced at import and at load',1,()=>{});
@@ -135,5 +142,5 @@ const idShape=/^[A-Za-z0-9_-]{1,64}$/;
   assert.equal(h.t.db().runs.length,0,'a scheduled run another tab already started was started again');
 
   for(const line of skipped)console.log(line);
-  console.log('PASS agents client: Markdown escaping, run trimming, follow-up text, the improved-instructions cap, import and stored ids, changes from another tab and claimed schedules passed.');
+  console.log('PASS agents client: Markdown escaping, run trimming, follow-up text, the improved-instructions cap, the workspace return focus, import and stored ids, changes from another tab and claimed schedules passed.');
 })().catch(e=>{console.error(e);process.exitCode=1;});

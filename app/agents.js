@@ -395,7 +395,7 @@
       const next=record.status==='done'&&agentById(a.chainTo);if(next&&!next.archived&&next.id!==a.id&&!(from?.seen||[]).includes(next.id))setTimeout(()=>run(next,`# ${record.title}\n\n${record.answer}`.slice(0,5000),undefined,undefined,{id:record.id,name:a.name,seen:[...(from?.seen||[]),a.id]}));}
   }
   // The studio covers the workspace; inert keeps Tab, screen readers and scroll-into-view out of what sits behind it.
-  function setMode(mode,push=true){document.body.classList.toggle('mode-agents',mode==='agents');sync(push);for(const el of document.body.children)if(el!==root&&!el.matches('dialog,script,#toast'))el.inert=mode==='agents';try{localStorage.setItem(MODE,mode);}catch{}if(mode==='agents')draw();else{document.title=BASE_TITLE;render();$('#agents-toggle')?.focus();}}
+  function setMode(mode,push=true){document.body.classList.toggle('mode-agents',mode==='agents');sync(push);for(const el of document.body.children)if(el!==root&&!el.matches('dialog,script,#toast'))el.inert=mode==='agents';try{localStorage.setItem(MODE,mode);}catch{}if(mode==='agents')draw();else{document.title=BASE_TITLE;render();$('#agents-toggle')?.focus({preventScroll:true});}}
 
   const menu=(b,open,focus=true)=>{for(const o of root.querySelectorAll('[data-more][aria-expanded="true"]'))if(o!==b){o.setAttribute('aria-expanded','false');o.nextElementSibling.hidden=true;}const m=b.nextElementSibling;b.setAttribute('aria-expanded',open);m.hidden=!open;if(focus)(open?m.firstElementChild:b).focus();};
   root.addEventListener('keydown',e=>{const m=e.target.closest?.('.ag-menu');if(!m)return;const items=[...m.children],i=items.indexOf(e.target),b=m.previousElementSibling;
@@ -558,5 +558,5 @@
   setTimeout(tick,3000);setInterval(tick,60000);
   const models=$('#ai-model');if(models)new MutationObserver(()=>{if(!document.body.classList.contains('mode-agents')||view==='wizard'||running)return;const m=document.activeElement?.dataset?.mirror;draw();if(m)root.querySelector(`[data-mirror="${m}"]`)?.focus();}).observe(models,{childList:true,subtree:true,attributes:true,attributeFilter:['disabled']});
   // Test seam: tests/verify-agents-client.cjs sets window.__agentsTest before loading this file. It is never set in the app.
-  if(window.__agentsTest)Object.assign(window.__agentsTest,{md,trimRuns,withParent,tick,db:()=>db,improving:()=>improving});
+  if(window.__agentsTest)Object.assign(window.__agentsTest,{md,trimRuns,withParent,tick,setMode,db:()=>db,improving:()=>improving});
 })();
