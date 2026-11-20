@@ -14,6 +14,10 @@ posted=JSON.parse(opts.body);
 return {ok:true,json:async()=>url.includes('anthropic')?{stop_reason:'end_turn',content:[{type:'text',text:JSON.stringify(output)}]}:url.includes('chat/completions')?{choices:[{finish_reason:'stop',message:{content:JSON.stringify(output)}}]}:{status:'completed',output:[{content:[{type:'output_text',text:JSON.stringify(output)}]}]}};
 };
 const openai=await listModels('openai',{force:true,fetchImpl:fake});assert.equal(openai.models.length,3);assert.equal(openai.excluded,1);
+// Structured output per model: a wrong flag sends a JSON schema to a model that rejects it, or withholds it from one that needs it.
+const flags=await listModels('openai',{force:true,fetchImpl:async()=>({ok:true,json:async()=>({data:['gpt-6-astra','gpt-5.3-chat-latest','gpt-4.1-mini','gpt-4o','gpt-4o-mini','gpt-4o-2024-08-06','o4-mini','gpt-4o-2024-05-13','gpt-4','gpt-4-turbo','gpt-3.5-turbo','chatgpt-4o-latest'].map(id=>({id}))})})});
+assert.deepEqual(Object.fromEntries(flags.models.map(m=>[m.id,m.structured])),{'gpt-6-astra':true,'gpt-5.3-chat-latest':false,'gpt-4.1-mini':true,'gpt-4o':true,'gpt-4o-mini':true,'gpt-4o-2024-08-06':true,'o4-mini':true,'gpt-4o-2024-05-13':false,'gpt-4':false,'gpt-4-turbo':false,'gpt-3.5-turbo':false,'chatgpt-4o-latest':true});
+await listModels('openai',{force:true,fetchImpl:fake});
 const claude=await listModels('anthropic',{force:true,fetchImpl:fake});assert.equal(claude.models.length,2);assert.ok(urls.some(u=>u.includes('after_id=claude-first')));
 for(const [provider,model] of [['openai','gpt-6-astra'],['openai','gpt-3.5-turbo'],['anthropic','claude-first'],['anthropic','claude-second']]){
 const result=await ask({provider,model,prompt:'Test',workspace},fake);assert.equal(posted.model,model);assert.equal(result.model,model);
