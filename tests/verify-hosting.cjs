@@ -86,6 +86,11 @@ if(!process.argv.includes('--fixture')){
       for(const part of ["default-src 'self'","script-src 'self'","object-src 'none'","base-uri 'none'","frame-ancestors 'none'"])assert(csp.includes(part),'CSP must include '+part);
       assert(!/script-src[^;]*unsafe-inline/.test(csp),'Scripts must not allow inline code');
       assert.equal(linked.headers['x-frame-options'],'DENY');
+      assert.equal(linked.headers['referrer-policy'],'no-referrer','The page must not send its address to other sites');
+      const allowed=linked.headers['permissions-policy']||'';
+      assert(allowed.includes('microphone=(self)'),'Dictation and the audio tools need the microphone');
+      for(const feature of ['camera','display-capture','geolocation','payment','usb'])assert(allowed.includes(feature+'=()'),'Permissions-Policy must switch off '+feature);
+      assert.equal((await request('/app.js')).headers['permissions-policy'],undefined,'Only the page carries the document policies');
       assert.equal((await request('/api/providers',{headers:{'Sec-Fetch-Site':'cross-site','Sec-Fetch-Mode':'navigate'}})).status,403);
       assert.equal((await request('/app.js',{headers:{'Sec-Fetch-Site':'cross-site','Sec-Fetch-Mode':'no-cors'}})).status,403);
       const status=await request('/api/providers',{headers:{Origin:origin}});assert.equal(status.status,200);assert.equal(JSON.parse(status.body).hosted,hosted);
