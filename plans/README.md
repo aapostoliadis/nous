@@ -1,6 +1,6 @@
 # Improvement plans for Nous
 
-Written against commit `95dd4e8` on 2026-11-13. Each plan is self-contained: an executor needs only the plan file and the repository.
+Written against commit `95dd4e8` on 2026-11-13. Plans 018 to 024 were written against `25910a5` on 2026-11-20. Each plan is self-contained: an executor needs only the plan file and the repository.
 
 Audit depth was `standard`. All nine categories were covered. The user selected all 13 vetted findings.
 
@@ -27,12 +27,23 @@ Update the Status column when a plan is finished or stopped. Values: `TODO`, `IN
 | 015 | [Test the 6,000-character cap on the Improve instructions fallback](015-test-improve-fallback-cap.md) | P3 | S | LOW | tests | 003, 007 | DONE (added 2026-11-14 from a gap found while reviewing 003; reviewed, approved; branch `advisor/015-test-improve-fallback-cap`, commit `6702913`, merged into local `main` at `76f4eda`, pushed to `origin` on 2026-11-14; the test fails with the slice removed and passes with it restored; the executor also passed Node's `AbortController` into the test page, which the plan did not list) |
 | 016 | [Name the Improve cases in the agents client test's pass line](016-name-improve-cases-in-pass-line.md) | P3 | S | LOW | tests | 015 | DONE (added 2026-11-14 from a gap found after 015; reviewed, approved; branch `advisor/016-name-improve-cases-in-pass-line`, commit `26fdd02`, merged into local `main` at `771b09d`, pushed to `origin` on 2026-11-15; one line changed in `tests/verify-agents-client.cjs`) |
 | 017 | [Keep the workspace scroll position when returning from Agents](017-keep-workspace-scroll-on-return-from-agents.md) | P3 | S | LOW | bug | 007 | DONE (2026-11-15: merged into local `main`, `npm test` passes; checked in a local browser: scroll stays at 300 and focus returns to the Agents button; pushed, and the same check passes on the live site) |
+| 018 | [Move the unused source artwork out of the served folder](018-move-unused-source-artwork.md) | P3 | S | LOW | tech debt | none | DONE, not merged (2026-11-20; reviewed and approved; commit `f5a47b4` on branch `advisor/018-move-unused-source-artwork`, based on `25910a5`, in worktree `../nous-repo-worktrees/018`; three renames with no content change, `docs/FIGMA-ADAPTATION.md` 4 insertions and 3 deletions, `npm test` passed. The doc is stored with LF line endings; the CRLF seen in the main checkout is a working-copy conversion only. After merge `/assets/nous-logo.png` answers 404) |
+| 019 | [Test lists, headings, tables and links in the Agents Markdown renderer](019-test-markdown-structure.md) | P3 | S | LOW | tests | none | DONE, not merged (2026-11-20; reviewed and approved; commit `f7303f8` on branch `advisor/019-test-markdown-structure`, worktree `D:\Downloads\nous\nous-repo-worktrees\019`, stacked on the 023 branch at `6c65348`, so merging it brings 023 too. 8 lines added in `tests/verify-agents-client.cjs`; `npm test` passes; the fail-proof step fails with the expected message) |
+| 020 | [Pin which OpenAI models are marked as supporting structured output](020-pin-structured-output-flags.md) | P3 | S | LOW | tests | none | DONE, not merged (executed 2026-11-20; reviewed and approved: 4 lines added to `tests/verify-models.cjs`, `npm test` passes; commit `7c33528` on branch `advisor/020-pin-structured-output-flags`, worktree `D:/Downloads/nous/nous-repo-worktrees/020`) |
+| 021 | [Remove a line in `modelMode` that can never run](021-remove-unreachable-model-branch.md) | P3 | S | LOW | tech debt | 020 | DONE, not merged (executed 2026-11-20; reviewed and approved: one line removed from `app/providers.cjs`, `npm test` passes; commit `b233326` on branch `advisor/021-remove-unreachable-model-branch`, which is stacked on the 020 branch; worktree `D:/Downloads/nous/nous-repo-worktrees/021`) |
+| 022 | [Check both Vercel configs against the server's list of public files](022-check-vercel-config-against-public-files.md) | P3 | S | LOW | tests | none | DONE, not merged (2026-11-20; reviewed and approved; 11 lines added to `tests/verify-hosting.cjs`, `npm test` passes; commit `06a4878` on branch `advisor/022-check-vercel-config-against-public-files`, worktree `D:\Downloads\nous\nous-repo-worktrees\022`, based on `25910a5`. Plan 024 edits the same test file, so base it on this branch or merge this one first) |
+| 023 | [Stop the Agents stream reader at 16,000,000 bytes](023-cap-agents-stream-reader.md) | P3 | S | LOW | bug | none | DONE, not merged (2026-11-20; reviewed and approved; `app/agents.js` 3 lines changed, `tests/verify-agents-client.cjs` 15 added and 3 removed, `npm test` passes; commit `6c65348` on branch `advisor/023-cap-agents-stream-reader`, worktree `D:\Downloads\nous\nous-repo-worktrees\023`, based on `25910a5`. It ran before plan 019, so 019 must find its places in `tests/verify-agents-client.cjs` by content, not by line number, and should be based on this branch or run after it is merged) |
+| 024 | [Send a referrer policy and a permissions policy with the page](024-add-referrer-and-permissions-policy.md) | P3 | S | LOW | security | none | DONE, not merged (2026-11-20; reviewed and approved; commit `c4249df` on branch `advisor/024-add-referrer-and-permissions-policy`, worktree `D:\Downloads\nous\nous-repo-worktrees\024`, stacked on the 022 branch at `06a4878`, so merging it brings 022 too. 3 lines added and 1 changed in `app/server.cjs`, 5 added in `tests/verify-hosting.cjs`; `npm test` passes; the fail-proof step fails with the expected message. Still needs one dictation check in a real browser after merge) |
 
 ## Recommended order
 
 006, 001, 002, 004, 003, 005, 007, 008, 009, 011, 010, 013, 012.
 
 The runner (006) goes first so every later plan's tests are picked up without editing `package.json` again. The two P1 fixes follow. 012 goes last because it changes how `app/agents.js` loads and saves, and it relies on the tests 007 adds.
+
+Second batch (added 2026-11-20): 020, 021, 019, 023, 022, 024, 018.
+
+020 goes first because 021 depends on its test. 019 goes before 023 and 022 before 024, because each pair edits the same test file and the later plan states the line shift the earlier one causes. 018 moves files only and can go at any point.
 
 ## Dependencies and files that collide
 
@@ -41,6 +52,7 @@ Hard dependencies:
 - 006 before 007 (007 adds a test file the runner must pick up).
 - 007 before 012 (012 extends the test file 007 creates).
 - 001 before 008, or both together (the policy in 008 is the second line of defence for the hole 001 closes).
+- 020 before 021 (020 adds the test that protects the file 021 edits).
 
 Plans that edit the same files. Run them one after another, each on top of the previous one, never in parallel:
 
@@ -48,6 +60,10 @@ Plans that edit the same files. Run them one after another, each on top of the p
 - `app/server.cjs` and `tests/verify-hosting.cjs`: 002, 008, 009.
 - `tests/`: 006 first (merged), then any plan that adds a test file (007; 014 is merged). The runner picks new `tests/verify-*.cjs` files up without a `package.json` edit.
 - `app/index.html`: 014 (merged) added a menu button with an inline `style` attribute; 008 must allow it the same way it allows the two existing swatches.
+- Second batch, `app/agents.js` and `tests/verify-agents-client.cjs`: 019 (test file only), then 023. 019 moves the test file's later lines down by 8.
+- Second batch, `app/server.cjs` and `tests/verify-hosting.cjs`: 022 (test file only), then 024. 022 moves the test file's later lines down by 11.
+- Second batch, `app/providers.cjs` and `tests/verify-models.cjs`: 020 (test file only), then 021.
+- 018 touches none of these files.
 
 Independent of everything else: 005, 010, 011, 013. 014 (added 2026-11-14 at the maintainer's request, not from the audit; merged) touched only the style files (`app/theme.js`, `app/dark-theme.css`, `app/index.html`, `app/assets/fonts/`) and added one test file. It changed the default style for every visitor without a saved choice. 010 is best done late so the README describes what shipped.
 
@@ -57,6 +73,7 @@ Plans that need more than a terminal:
 - 011 needs network access for two `git ls-remote` lookups, and its real test is the first CI run after a push.
 - 012 step 5 needed two browser tabs. Done.
 - 014 needed network access for the font download, and a look at the new style in a real browser. Both are done.
+- 024 should be followed by one dictation check in a real browser, to confirm the microphone prompt still appears.
 
 ## Considered and rejected
 
@@ -71,21 +88,17 @@ Do not re-audit these without new evidence.
 | Instruction-shaped text in `AGENTS.md` and the SessionStart hook | Read and found benign. Ordinary contributor guidance. |
 | README wording on where API keys are stored | Accurate. Checked against `app/connections.js:17`. |
 | README claims Agents results can be printed | The README makes no such claim, and `app/agents.js` has no `window.print`. |
+| Several source files keep whole functions on one very long line | House style. The repository has no dependencies, so there is no formatter to run, and a reformat by hand is a very large diff that changes no behaviour. (2026-11-20) |
+| One shared `readJson` helper in place of the copies | No `readJson` exists. About ten inline copies with different error messages sit in four client files that share no module system, so there is nowhere to put a shared one. (2026-11-20) |
+| One `innerHTML` update per animation frame at `app/agents.js:374` | Plan 013 already throttles answer events on the server, so the browser no longer gets one update per fragment. (2026-11-20) |
+| `md()` in `app/agents.js` does not render numbered lists | Wrong. It does, at `app/agents.js:96` and `:98`. The real gap was the missing test, which plan 019 adds. (2026-11-20) |
 
 ## Found but not planned
 
-Lower value. Each is a candidate for a later run.
+Nothing is left here. All ten items from the first audit were handled on 2026-11-20:
 
-- About 2.4 MB of PNG files in `app/assets` that nothing references.
-- `md()` in `app/agents.js` does not render numbered lists, and its link pattern is loose.
-- The model-capability pattern at `app/providers.cjs:63` will need care as model names change.
-- An unreachable branch at `app/providers.cjs:39`.
-- `vercel.json` is only lightly checked by the tests.
-- Several source files keep whole functions on one very long line, which makes diffs hard to review.
-- The Agents stream reader has no byte cap. The Connections reader caps at 16,000,000.
-- After 008: `Referrer-Policy` and `Permissions-Policy` headers.
-- After 005: one shared `readJson` helper in place of three copies.
-- After 013: coalesce the `innerHTML` update at `app/agents.js:374` to one per animation frame.
+- Seven became plans 018 to 024 (see the Status table).
+- Three were rejected: the long one-line functions, the shared `readJson` helper and the per-frame `innerHTML` update. The claim that `md()` does not render numbered lists was also wrong. All four are in the table above.
 
 ## Direction
 
