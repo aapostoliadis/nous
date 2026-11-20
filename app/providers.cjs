@@ -36,7 +36,6 @@ function modelMode(provider,id) {
   if(/^gpt-(?:realtime|4o(?:-mini)?-realtime-preview)(-|$)/.test(base)&&!/translate|whisper/.test(base))return 'realtime';
   if(!/^(gpt-|chatgpt-|chat-latest$|o[1-9](?:-|$))/.test(base)||/audio|realtime|transcri|tts|image|live-|instruct/.test(base)) return null;
   if(/deep-research|search-preview|search-api/.test(base)) return null; // Requires research tools, outside the text workspace.
-  if(/search-preview|search-api/.test(base)) return 'chat';
   if(/chat-latest/.test(base)||/^gpt-3\.5|^gpt-4(?:$|-(?:0|turbo|32k|vision))/.test(base)) return 'chat';
   return 'responses';
 }
