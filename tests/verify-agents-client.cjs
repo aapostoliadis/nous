@@ -60,6 +60,14 @@ const idShape=/^[A-Za-z0-9_-]{1,64}$/;
   assert.ok(styled.includes('<strong>bold</strong>')&&styled.includes('<code>code</code>'),'bold and inline code no longer render');
   const fenced=md('```\n<script>alert(1)</script>\n```');
   assert.ok(fenced.includes('<pre><code>&lt;script&gt;')&&!fenced.includes('<script'),'a script tag inside a code block would run instead of showing');
+  // Markdown structure: lists, headings, tables and bare links are how a result stays readable.
+  assert.equal(md('1. one\n2. two'),'<ol><li>one</li><li>two</li></ol>','a numbered list no longer renders as an ordered list');
+  assert.equal(md('- a\n* b'),'<ul><li>a</li><li>b</li></ul>','a bulleted list no longer renders as an unordered list');
+  assert.equal(md('Intro\n1) one\n- a'),'<p>Intro</p><ol><li>one</li></ol><ul><li>a</li></ul>','a paragraph, a numbered list and a bulleted list in a row ran together');
+  assert.equal(md('# Title\n## Part'),'<h3>Title</h3><h4>Part</h4>','headings in a result must start at h3, under the page headings');
+  assert.equal(md('| A | B |\n|---|---|\n| 1 | 2 |'),'<div class="ag-table"><table><thead><tr><th>A</th><th>B</th></tr></thead><tbody><tr><td>1</td><td>2</td></tr></tbody></table></div>','a table with a header row no longer renders');
+  assert.equal(md('See https://example.com/a.'),'<p>See <a href="https://example.com/a" target="_blank" rel="noopener noreferrer">https://example.com/a</a>.</p>','the full stop after a bare link became part of the link');
+  assert.equal(md('[docs](https://example.com/a)'),'<p><a href="https://example.com/a" target="_blank" rel="noopener noreferrer">docs</a></p>','a named link no longer renders');
 
   // Run trimming: the list stays near 100 without losing results the person has not seen.
   h=load({agents:[agent()],runs:[...Array(120)].map((_,i)=>done(i,true)),draft:null});h.t.trimRuns();
