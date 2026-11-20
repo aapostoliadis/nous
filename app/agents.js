@@ -109,9 +109,9 @@
   async function stream(response,signal,onAnswer,onStep){
     if(!response.ok){const data=await response.json().catch(()=>({}));throw Error(data.error||'The provider could not finish the request.');}
     if(!response.headers.get('content-type')?.includes('application/x-ndjson'))return response.json();
-    const reader=response.body.getReader(),decoder=new TextDecoder();let buffer='',result=null;
+    const reader=response.body.getReader(),decoder=new TextDecoder();let buffer='',result=null,total=0;
     const event=line=>{if(!line.trim())return;const item=JSON.parse(line);if(item.type==='error')throw Error(item.error||'The provider interrupted the run.');if(item.type==='answer')onAnswer(item.answer);if(item.type==='step')onStep?.(item.step);if(item.type==='complete')result=item.result;};
-    try{while(true){signal.throwIfAborted();const {done,value}=await reader.read();if(done)break;buffer+=decoder.decode(value,{stream:true});let end;while((end=buffer.indexOf('\n'))!==-1){event(buffer.slice(0,end));buffer=buffer.slice(end+1);}}event(buffer+decoder.decode());}
+    try{while(true){signal.throwIfAborted();const {done,value}=await reader.read();if(done)break;total+=value.byteLength;if(total>16000000)throw Error('The result was too large to read. Run it again with a narrower request.');buffer+=decoder.decode(value,{stream:true});let end;while((end=buffer.indexOf('\n'))!==-1){event(buffer.slice(0,end));buffer=buffer.slice(end+1);}}event(buffer+decoder.decode());}
     finally{await reader.cancel().catch(()=>{});reader.releaseLock();}
     if(!result)throw Error('The connection ended before the result was complete. Run it again.');return result;
   }
@@ -558,5 +558,5 @@
   setTimeout(tick,3000);setInterval(tick,60000);
   const models=$('#ai-model');if(models)new MutationObserver(()=>{if(!document.body.classList.contains('mode-agents')||view==='wizard'||running)return;const m=document.activeElement?.dataset?.mirror;draw();if(m)root.querySelector(`[data-mirror="${m}"]`)?.focus();}).observe(models,{childList:true,subtree:true,attributes:true,attributeFilter:['disabled']});
   // Test seam: tests/verify-agents-client.cjs sets window.__agentsTest before loading this file. It is never set in the app.
-  if(window.__agentsTest)Object.assign(window.__agentsTest,{md,trimRuns,withParent,tick,setMode,db:()=>db,improving:()=>improving});
+  if(window.__agentsTest)Object.assign(window.__agentsTest,{md,stream,trimRuns,withParent,tick,setMode,db:()=>db,improving:()=>improving});
 })();

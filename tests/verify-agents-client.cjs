@@ -26,7 +26,7 @@ function load(stored,{provider}={}){
   const ctx={document,toast:m=>toasts.push(m),toastTimer:0,$:s=>document.querySelector(s),state:{},save:noop,render:noop,setMode:noop,current:()=>null,
     esc:v=>String(v ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),
     localStorage:{getItem:k=>storage.has(k)?storage.get(k):null,setItem:(k,v)=>{storage.set(k,String(v));},removeItem:k=>{storage.delete(k);}},
-    crypto:require('node:crypto').webcrypto,MutationObserver:class{observe(){}disconnect(){}},AbortController,setTimeout:()=>0,setInterval:()=>0,
+    crypto:require('node:crypto').webcrypto,MutationObserver:class{observe(){}disconnect(){}},AbortController,TextDecoder,setTimeout:()=>0,setInterval:()=>0,
     location:{hash:'',search:'',pathname:'/',href:'http://localhost/'},navigator:{onLine:true},addEventListener:(name,fn)=>{(winHandlers[name]??=[]).push(fn);},
     fetch:async()=>{throw Error('The agents client test never calls a provider.');}};
   ctx.window=ctx;ctx.__agentsTest={};
@@ -49,7 +49,7 @@ const idShape=/^[A-Za-z0-9_-]{1,64}$/;
 
 (async()=>{
   let h=load();
-  for(const name of ['md','trimRuns','withParent','improving','setMode'])assert.equal(typeof h.t[name],'function',`the test seam does not expose ${name}`);
+  for(const name of ['md','stream','trimRuns','withParent','improving','setMode'])assert.equal(typeof h.t[name],'function',`the test seam does not expose ${name}`);
   const {md,withParent}=h.t;
 
   // Markdown renderer: model output becomes HTML, so anything that survives as markup can run in the person's page.
@@ -60,6 +60,14 @@ const idShape=/^[A-Za-z0-9_-]{1,64}$/;
   assert.ok(styled.includes('<strong>bold</strong>')&&styled.includes('<code>code</code>'),'bold and inline code no longer render');
   const fenced=md('```\n<script>alert(1)</script>\n```');
   assert.ok(fenced.includes('<pre><code>&lt;script&gt;')&&!fenced.includes('<script'),'a script tag inside a code block would run instead of showing');
+  // Markdown structure: lists, headings, tables and bare links are how a result stays readable.
+  assert.equal(md('1. one\n2. two'),'<ol><li>one</li><li>two</li></ol>','a numbered list no longer renders as an ordered list');
+  assert.equal(md('- a\n* b'),'<ul><li>a</li><li>b</li></ul>','a bulleted list no longer renders as an unordered list');
+  assert.equal(md('Intro\n1) one\n- a'),'<p>Intro</p><ol><li>one</li></ol><ul><li>a</li></ul>','a paragraph, a numbered list and a bulleted list in a row ran together');
+  assert.equal(md('# Title\n## Part'),'<h3>Title</h3><h4>Part</h4>','headings in a result must start at h3, under the page headings');
+  assert.equal(md('| A | B |\n|---|---|\n| 1 | 2 |'),'<div class="ag-table"><table><thead><tr><th>A</th><th>B</th></tr></thead><tbody><tr><td>1</td><td>2</td></tr></tbody></table></div>','a table with a header row no longer renders');
+  assert.equal(md('See https://example.com/a.'),'<p>See <a href="https://example.com/a" target="_blank" rel="noopener noreferrer">https://example.com/a</a>.</p>','the full stop after a bare link became part of the link');
+  assert.equal(md('[docs](https://example.com/a)'),'<p><a href="https://example.com/a" target="_blank" rel="noopener noreferrer">docs</a></p>','a named link no longer renders');
 
   // Run trimming: the list stays near 100 without losing results the person has not seen.
   h=load({agents:[agent()],runs:[...Array(120)].map((_,i)=>done(i,true)),draft:null});h.t.trimRuns();
@@ -141,6 +149,18 @@ const idShape=/^[A-Za-z0-9_-]{1,64}$/;
   assert.equal(JSON.parse(h.storage.get(KEY)).agents[0].ranAt,claim,'this tab overwrote a schedule another tab had already claimed');
   assert.equal(h.t.db().runs.length,0,'a scheduled run another tab already started was started again');
 
+  // Stream reader: a response that never ends must stop at 16,000,000 bytes instead of filling the tab's memory.
+  const ndjson=read=>{const state={cancelled:false};return {state,response:{ok:true,headers:{get:()=>'application/x-ndjson'},body:{getReader:()=>({read,cancel:async()=>{state.cancelled=true;},releaseLock(){}})}}};};
+  const lines=[Buffer.from('{"type":"answer","answer":"Hi"}\n{"type":"comp'),Buffer.from('lete","result":{"answer":"Hi there"}}\n')],answers=[];
+  const small=ndjson(async()=>lines.length?{done:false,value:lines.shift()}:{done:true});
+  const result=await h.t.stream(small.response,new AbortController().signal,a=>answers.push(a));
+  assert.equal(result.answer,'Hi there','a result split across two chunks was not read');assert.equal(answers.join(),'Hi');
+  let reads=0;const block=new Uint8Array(4000000).fill(32);
+  const endless=ndjson(async()=>{reads++;return {done:false,value:block};});
+  await assert.rejects(()=>h.t.stream(endless.response,new AbortController().signal,()=>{}),/too large/,'a response with no end was read without a limit');
+  assert.equal(reads,5,'the reader must stop at the first chunk that passes 16,000,000 bytes');
+  assert.ok(endless.state.cancelled,'the reader must cancel the connection when it stops early');
+
   for(const line of skipped)console.log(line);
-  console.log('PASS agents client: Markdown escaping, run trimming, follow-up text, the improved-instructions cap, the workspace return focus, import and stored ids, changes from another tab and claimed schedules passed.');
+  console.log('PASS agents client: Markdown escaping, run trimming, follow-up text, the improved-instructions cap, the workspace return focus, import and stored ids, changes from another tab, claimed schedules and the stream size cap passed.');
 })().catch(e=>{console.error(e);process.exitCode=1;});
