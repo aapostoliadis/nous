@@ -24,11 +24,22 @@ if(!process.argv.includes('--fixture')){
   const handler=require('../app/server.cjs');
   http.Server.prototype.listen=originalListen;
   assert.equal(typeof handler,'function');
+  // The server's list of public files, read from its source: every one must exist and be bundled by both Vercel configs.
+  const publicFiles=JSON.parse(fs.readFileSync(path.join(__dirname,'../app/server.cjs'),'utf8').match(/const publicFiles=new Set\((\[[^\]]+\])\)/)[1].replace(/'/g,'"'));
+  assert.ok(publicFiles.length>=10&&publicFiles.includes('index.html'),'The public file list in app/server.cjs could not be read');
+  for(const file of publicFiles)assert.ok(fs.existsSync(path.join(__dirname,'../app',file)),`app/server.cjs serves ${file}, but the file does not exist`);
   for(const root of ['..','../app']){
     const config=JSON.parse(fs.readFileSync(path.join(__dirname,root,'vercel.json'),'utf8'));
     assert.equal(config.builds[0].src.endsWith('vercel-entry.mjs'),true);
     assert.equal(config.builds[0].config.helpers,false);
     assert.equal(config.routes[0].dest.endsWith('vercel-entry.mjs'),true);
+    const prefix=root==='..'?'app/':'',{includeFiles,excludeFiles}=config.builds[0].config;
+    // A glob ending in /** covers a whole folder; in any other glob a * stays inside one folder.
+    const bundled=file=>includeFiles.some(glob=>glob.endsWith('/**')?(prefix+file).startsWith(glob.slice(0,-2)):new RegExp('^'+glob.replace(/[.+?^${}()|[\]\\]/g,'\\$&').replace(/\*/g,'[^/]*')+'$').test(prefix+file));
+    for(const file of [...publicFiles,'assets/nous-logo.svg','assets/fonts/inter.woff2'])assert.ok(bundled(file),`${root}/vercel.json does not bundle ${file}, so the deployed app would answer 404 for it`);
+    assert.ok(!bundled('server.cjs')&&!bundled('.env.local'),`${root}/vercel.json bundles a private file as a static file`);
+    assert.ok(excludeFiles.includes('**/.env*'),`${root}/vercel.json must keep .env files out of the deployment`);
+    assert.equal(config.routes.length,1,`${root}/vercel.json must send every request through one route`);assert.equal(config.routes[0].src,'/(.*)');
   }
   const server=http.createServer(handler);
   (async()=>{
@@ -75,6 +86,11 @@ if(!process.argv.includes('--fixture')){
       for(const part of ["default-src 'self'","script-src 'self'","object-src 'none'","base-uri 'none'","frame-ancestors 'none'"])assert(csp.includes(part),'CSP must include '+part);
       assert(!/script-src[^;]*unsafe-inline/.test(csp),'Scripts must not allow inline code');
       assert.equal(linked.headers['x-frame-options'],'DENY');
+      assert.equal(linked.headers['referrer-policy'],'no-referrer','The page must not send its address to other sites');
+      const allowed=linked.headers['permissions-policy']||'';
+      assert(allowed.includes('microphone=(self)'),'Dictation and the audio tools need the microphone');
+      for(const feature of ['camera','display-capture','geolocation','payment','usb'])assert(allowed.includes(feature+'=()'),'Permissions-Policy must switch off '+feature);
+      assert.equal((await request('/app.js')).headers['permissions-policy'],undefined,'Only the page carries the document policies');
       assert.equal((await request('/api/providers',{headers:{'Sec-Fetch-Site':'cross-site','Sec-Fetch-Mode':'navigate'}})).status,403);
       assert.equal((await request('/app.js',{headers:{'Sec-Fetch-Site':'cross-site','Sec-Fetch-Mode':'no-cors'}})).status,403);
       const status=await request('/api/providers',{headers:{Origin:origin}});assert.equal(status.status,200);assert.equal(JSON.parse(status.body).hosted,hosted);
