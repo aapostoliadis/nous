@@ -17,9 +17,10 @@ This is an adaptation of the kit's visual system to Nous, not a copy of its cust
 
 ## Bundled assets
 
-- `../app/assets/workspace-texture.png`: exact embedded image `a6ff41334869ab2b7073680a2d8006d53b80c4a6`, used by the kit's Home and assistant panel.
-- `../app/assets/nous-logo.png`: user-supplied artwork, retained unchanged as the source reference.
-- `../app/assets/nous-logo.svg` and `nous-symbol.svg`: smooth vector outlines traced from the original supplied artwork. These are used throughout the interface and contain no embedded bitmap or background. The previous transparent PNG is retained as an unused intermediate asset.
+- `../app/assets/workspace-texture.webp`: the kit's embedded image `a6ff41334869ab2b7073680a2d8006d53b80c4a6`, stored as WebP, used by the kit's Home and assistant panel.
+- `source-artwork/nous-logo.png`: user-supplied artwork, retained unchanged as the source reference. It is kept outside `app/` so that it is not served or deployed.
+- `../app/assets/nous-logo.svg` and `nous-symbol.svg`: smooth vector outlines traced from the original supplied artwork. These are used throughout the interface and contain no embedded bitmap or background. The previous transparent PNG is retained as an unused intermediate asset at `source-artwork/nous-logo-transparent.png`.
+- `source-artwork/nous-editorial.png`: artwork the interface does not use, retained for reference.
 - `../app/assets/fonts/`: Inter and Plus Jakarta Sans variable fonts, Latin subset, with SIL Open Font licences.
 
 All runtime assets are local. Existing saved work is retained through the unchanged browser-storage key. The implementation uses a separate `kit-theme.css` adaptation layer and retains the original application structure and handlers.
