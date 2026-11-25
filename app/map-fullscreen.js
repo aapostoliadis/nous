@@ -88,8 +88,10 @@
     if (active && ownsFullscreen && !document.fullscreenElement) exit();
     else fitMap();
   });
+  // Browsers that do not know the :open selector throw on it. Treat that as no picker open, so Escape still leaves the map.
+  function pickerOpen(){try{return Boolean(document.querySelector('select:open'));}catch{return false;}}
   document.addEventListener('keydown', event => {
-    if (active && event.key === 'Escape' && !document.querySelector('#dialog').open && !document.querySelector('select:open')) {
+    if (active && event.key === 'Escape' && !document.querySelector('#dialog').open && !pickerOpen()) {
       event.preventDefault();
       exit();
     }
