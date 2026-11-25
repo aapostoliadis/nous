@@ -5,7 +5,6 @@
   const frame = document.querySelector('.surface-frame');
   const main = document.querySelector('#main');
   let active = false;
-  let ownsFullscreen = false;
   let fitting;
   let priorScroll = { x: 0, y: 0 };
 
@@ -73,21 +72,13 @@
   async function exit() {
     if (!active) return;
     active = false;autoFit=false;initial=true;
-    const leaveNative = ownsFullscreen && Boolean(document.fullscreenElement);
-    ownsFullscreen = false;
     sync();
-    if (leaveNative) {
-      try { await document.exitFullscreen(); } catch { /* Viewport mode is already restored. */ }
-    }
     surface.scrollTo(priorScroll.x, priorScroll.y);
     if (!control.hidden) control.focus({ preventScroll: true });
   }
 
   control.addEventListener('click', () => active ? exit() : enter());
-  document.addEventListener('fullscreenchange', () => {
-    if (active && ownsFullscreen && !document.fullscreenElement) exit();
-    else fitMap();
-  });
+  document.addEventListener('fullscreenchange', fitMap);
   // Browsers that do not know the :open selector throw on it. Treat that as no picker open, so Escape still leaves the map.
   function pickerOpen(){try{return Boolean(document.querySelector('select:open'));}catch{return false;}}
   document.addEventListener('keydown', event => {
