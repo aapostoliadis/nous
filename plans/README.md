@@ -34,8 +34,8 @@ Update the Status column when a plan is finished or stopped. Values: `TODO`, `IN
 | 022 | [Check both Vercel configs against the server's list of public files](022-check-vercel-config-against-public-files.md) | P3 | S | LOW | tests | none | DONE, merged into local `main` on 2026-11-20 by merge `b33a432` (with 024), since pushed to `origin/main` (confirmed 2026-11-25) (2026-11-20; reviewed and approved; 11 lines added to `tests/verify-hosting.cjs`, `npm test` passes; commit `06a4878` on branch `advisor/022-check-vercel-config-against-public-files`, worktree `D:\Downloads\nous\nous-repo-worktrees\022`, based on `25910a5`. Plan 024 edits the same test file, so base it on this branch or merge this one first) |
 | 023 | [Stop the Agents stream reader at 16,000,000 bytes](023-cap-agents-stream-reader.md) | P3 | S | LOW | bug | none | DONE, merged into local `main` on 2026-11-20 by merge `5265ed7` (with 019), since pushed to `origin/main` (confirmed 2026-11-25) (2026-11-20; reviewed and approved; `app/agents.js` 3 lines changed, `tests/verify-agents-client.cjs` 15 added and 3 removed, `npm test` passes; commit `6c65348` on branch `advisor/023-cap-agents-stream-reader`, worktree `D:\Downloads\nous\nous-repo-worktrees\023`, based on `25910a5`. It ran before plan 019, so 019 must find its places in `tests/verify-agents-client.cjs` by content, not by line number, and should be based on this branch or run after it is merged) |
 | 024 | [Send a referrer policy and a permissions policy with the page](024-add-referrer-and-permissions-policy.md) | P3 | S | LOW | security | none | DONE, merged into local `main` on 2026-11-20 by merge `b33a432`, since pushed to `origin/main` (confirmed 2026-11-25) (2026-11-20; reviewed and approved; commit `c4249df` on branch `advisor/024-add-referrer-and-permissions-policy`, worktree `D:\Downloads\nous\nous-repo-worktrees\024`, stacked on the 022 branch at `06a4878`, so merging it brings 022 too. 3 lines added and 1 changed in `app/server.cjs`, 5 added in `tests/verify-hosting.cjs`; `npm test` passes; the fail-proof step fails with the expected message. After merge, checked in a headless browser on the local server: the page allows the microphone and blocks the camera and geolocation, with no console errors. Spoken dictation was not tested) |
-| 025 | [Keep Escape working in the full screen map where `:open` is unknown](025-guard-open-selector-in-map-escape.md) | P2 | S | LOW | bug | none | TODO |
-| 026 | [Remove the native full screen branches that can never run](026-remove-unused-native-fullscreen-branches.md) | P3 | S | LOW | tech debt | 025 | TODO |
+| 025 | [Keep Escape working in the full screen map where `:open` is unknown](025-guard-open-selector-in-map-escape.md) | P2 | S | LOW | bug | none | DONE (2026-11-25; commit `0c0c2de` on branch `advisor/025-guard-open-selector-in-map-escape`, merged into local `main` by fast-forward, not pushed. `app/map-fullscreen.js` 3 lines added and 1 removed, plus the new `tests/verify-map-fullscreen.cjs`; `npm test` passes; the test failed with the expected message before the fix. Not verified in a Safari older than 26.5 or a Firefox older than 136) |
+| 026 | [Remove the native full screen branches that can never run](026-remove-unused-native-fullscreen-branches.md) | P3 | S | LOW | tech debt | 025 | DONE (2026-11-25; commit `7930051` on branch `advisor/026-remove-unused-native-fullscreen-branches`, stacked on 025, merged into local `main` by fast-forward, not pushed. `app/map-fullscreen.js` 1 line added and 10 removed, `tests/verify-map-fullscreen.cjs` 4 added; `npm test` passes; the test failed with the expected message before the fix. Checked in a headless browser on the local server at 1280x720: the button and Escape both enter and leave the full screen map, focus returns to the button, no console errors. The surface was not scrolled before entering, so the scroll restore was not exercised. The plan's done criterion expects `git grep -c "ownsFullscreen" -- app/ tests/` to print `tests/verify-map-fullscreen.cjs:2`; it prints `:1`, because both uses sit on one line of the test) |
 
 The worktrees and `advisor/*` branches named in rows 018 to 024 were removed on 2026-11-20, after the merge. Every commit they held is in `main`.
 
@@ -83,7 +83,7 @@ Plans that need more than a terminal:
 - 014 needed network access for the font download, and a look at the new style in a real browser. Both are done.
 - 024 should be followed by one dictation check in a real browser, to confirm the microphone prompt still appears. Still open on 2026-11-25: it needs a person, a microphone and a provider key. The live site was checked that day and sends `microphone=(self)` in its `Permissions-Policy` header, so the header itself is right.
 - 025 is proved by a Node test with fake `document` objects. Pressing Escape in a Safari older than 26.5 or a Firefox older than 136 would confirm it for real.
-- 026's automated proof is text-based. Its step 5 needs one look at the full screen map in a browser: enter and leave with the button and with Escape.
+- 026's automated proof is text-based. Its step 5 needs one look at the full screen map in a browser: enter and leave with the button and with Escape. Done on 2026-11-25 in a headless browser.
 
 ## Considered and rejected
 
@@ -112,7 +112,12 @@ Nothing is left here. All ten items from the first audit were handled on 2026-11
 
 Added 2026-11-25, from the audit of the areas the first pass skipped:
 
-- `ownsFullscreen` in `app/map-fullscreen.js` (line 8) is never set to `true`, so the native full screen branches at lines 76 to 81 and line 88 never run. This became plan 026 on 2026-11-25. Nothing else is left here.
+- `ownsFullscreen` in `app/map-fullscreen.js` (line 8) is never set to `true`, so the native full screen branches at lines 76 to 81 and line 88 never run. This became plan 026 on 2026-11-25.
+
+Added 2026-11-25, while checking the interface review fixes (commit `9d58c80`). Neither is planned or changed:
+
+- At a 300px viewport the page is 317px wide, so it scrolls sideways by 17px. The top actions row causes it: the Help button's right edge sits at 317px. The width is the same on `432e508`, before the interface fixes, so they did not cause it. At 320px, the narrowest width the app is checked at, the page does not scroll sideways.
+- The app reopens in Agents mode when that was the last mode used, because the mode is kept in browser storage. This is existing behaviour, not a bug. It matters for browser checks: confirm `document.body.className` does not contain `mode-agents` before measuring the workspace.
 
 ## Direction
 
