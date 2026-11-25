@@ -168,12 +168,23 @@ function submitAsk(commandsOnly=false) {
   } catch(error) {
     console.error(error);
     document.querySelector('#ask-announcement').textContent='The request could not be completed. Your text has been kept so you can try again.';
-    toast('The request could not be completed. Your text has been kept.');
+    toast('The request could not be completed. Your text has been kept so you can try again.');
   }
   return true;
 }
 window.submitAsk=submitAsk;
 const askAnnouncement=document.createElement('div');
 askAnnouncement.id='ask-announcement';askAnnouncement.className='sr-only';askAnnouncement.setAttribute('role','status');askAnnouncement.setAttribute('aria-live','polite');document.body.append(askAnnouncement);
+// A narrow Ask field cuts the full prompt off mid-word, so show the longest prompt that fits.
+const askPrompts=[document.querySelector('#command').placeholder,'Ask or describe a change…','Ask or describe…'];
+function fitAskPlaceholder(){
+  const input=document.querySelector('#command'),style=getComputedStyle(input),ruler=document.createElement('canvas').getContext('2d');
+  ruler.font=style.font;
+  const room=input.clientWidth-parseFloat(style.paddingLeft)-parseFloat(style.paddingRight);
+  input.placeholder=askPrompts.find(text=>ruler.measureText(text).width<=room)||askPrompts.at(-1);
+}
+window.addEventListener('resize',fitAskPlaceholder);
+document.fonts?.ready.then(fitAskPlaceholder);
+fitAskPlaceholder();
 if(state.showAskResult && askCurrentResult()?.kind === 'unmatched') document.querySelector('#command').value = askCurrentResult().query;
 render();

@@ -30,7 +30,7 @@ nous-orb canvas{display:block}
 #ai-model{max-width:240px;min-width:155px}
 #ai-model[hidden],#refresh-models[hidden]{display:none}
 #refresh-models{font-size:18px;width:26px;height:26px;border-radius:50%;color:#28563f;flex:none}
-#refresh-models:hover{background:var(--accent-bg,#e9f1ed)}
+@media(hover:hover){#refresh-models:hover{background:var(--accent-bg,#e9f1ed)}}
 #connection-status{max-width:240px;overflow-wrap:anywhere}
 @media(max-width:850px){.provider-controls{justify-content:flex-start}#ai-model{max-width:calc(100vw - 205px);min-width:120px;flex:1}#connection-status{max-width:100%;min-width:45px}}
 @media(max-width:850px){.command-context{flex-wrap:wrap;gap:8px}.provider-controls{width:100%;margin-left:0;flex-wrap:wrap}#connection-status{flex:1}.provider-controls select{min-width:130px}}

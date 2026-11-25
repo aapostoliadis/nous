@@ -63,6 +63,8 @@ function render(){
   host.innerHTML=reviewOpen?`<div class="review-scrim" data-close-review></div><aside class="review-panel" id="review-panel" role="dialog" aria-modal="true" aria-label="Proposed action" tabindex="-1"><button class="review-back" data-close-review>← Back to ${esc(back)}</button>${renderActions()}</aside>`:'';
   host.querySelectorAll('[data-close-review]').forEach(b=>b.onclick=closeReview);
   document.body.classList.toggle('review-open',reviewOpen);
+  // The review panel is modal: nothing behind it takes focus. Agents mode manages inert itself.
+  if(!document.body.classList.contains('mode-agents'))for(const el of document.body.children)if(el!==host&&!el.matches('dialog,script,#toast'))el.inert=reviewOpen;
   const inspectorContent=window.renderModelProgress?.() || (state.showAskResult&&window.renderAskResult?renderAskResult():state.selected&&obj(state.selected)?renderInspector(obj(state.selected)):renderContext());
   $('#inspector').innerHTML=`<div class="inspector-scroll" tabindex="0" aria-label="Inspector content">${inspectorContent}</div>`;
   bindSurface();save();
@@ -82,7 +84,7 @@ const listOrder=['question','claim','assumption','evidence','source','decision',
 function renderMapMode(){return `<div class="map-mode" role="group" aria-label="Map layout"><button type="button" data-map-mode="map" aria-pressed="${!mapList}">Map</button><button type="button" data-map-mode="list" aria-pressed="${mapList}">List</button></div>`}
 function renderObjectList(){const objs=current(),types=[...new Set([...listOrder,...objs.map(o=>o.type)])].filter(t=>objs.some(o=>o.type===t));return `<div class="view-page object-list">${renderMapMode()}${types.map(t=>{const group=objs.filter(o=>o.type===t);return `<section><h3>${t} <span>${group.length}</span></h3><ul>${group.map(o=>`<li><button class="object-row${state.selected===o.id?' selected':''}" data-object="${o.id}"><b>${esc(o.title)}</b>${badge(o.state)}</button></li>`).join('')}</ul></section>`}).join('')}</div>`}
 function renderMapHeading(){return `<div class="surface-heading"><span>THE SHAPE OF THE WORK</span><label class="branch-switch">⑂ <select id="branch-select" aria-label="Active branch">${state.branches.map(b=>`<option value="${b.id}" ${b.id===state.branch?'selected':''}>${esc(b.name)}</option>`).join('')}</select></label></div>`;}
-function renderMap(){return mapList?renderObjectList():`<div class="map-viewport">${renderMapMode()}${renderMapHeading()}<div class="map-content">${renderMapContent()}</div>${renderTray()}</div>`;}
+function renderMap(){return mapList?renderObjectList():`<div class="map-viewport">${renderMapMode()}${renderMapHeading()}${renderTray()}<div class="map-content">${renderMapContent()}</div></div>`;}
 // Objects outside the fixed six stay in the tray until the person places them; placement is saved as o.pos.
 let trayOpen=false;
 function renderTray(){const extra=current().filter(o=>!mapCore.includes(o.id)&&!o.pos);return extra.length?`<details class="map-tray"${trayOpen?' open':''}><summary>Unplaced (${extra.length})</summary><p>Drag onto the map, or choose Place.</p><ul>${extra.map(o=>`<li draggable="true" data-drag="${o.id}"><button class="tray-object" data-object="${o.id}"><span class="type ${o.type}">${o.type}</span><strong>${esc(o.title)}</strong>${badge(o.state)}</button><button class="tray-place" data-place="${o.id}" aria-label="Place ${esc(o.title)} on the map">Place</button></li>`).join('')}</ul></details>`:'';}

@@ -2,7 +2,7 @@
 select{font-family:var(--sans);color:var(--ink);cursor:pointer}
 .surface-heading select{border:1px solid #e3e5e9;border-radius:99px;padding:9px 13px;background:#fff;font-size:12px;max-width:240px}
 .inspector-state,dialog select{border:1px solid #e3e5e9;border-radius:14px;padding:11px 14px;background:#fff;color:var(--ink);font-size:12px}
-select:hover{border-color:#bdd0c6;background-color:#fafcfb}
+@media(hover:hover){select:hover{border-color:#bdd0c6;background-color:#fafcfb}}
 select:focus-visible{outline:2px solid #739981;outline-offset:3px}
 @supports (appearance:base-select){
  select,select::picker(select){appearance:base-select}
@@ -14,7 +14,7 @@ select:focus-visible{outline:2px solid #739981;outline-offset:3px}
  select option{display:flex;align-items:center;justify-content:space-between;gap:18px;min-height:38px;padding:10px 12px;border-radius:10px;background:transparent;color:var(--muted);white-space:normal;overflow-wrap:anywhere;cursor:pointer}
  select option+option{margin-top:2px}
  select option:checked{background:var(--accent-bg,#e9f1ed);color:var(--accent-strong,#295b44);font-weight:500}
- select option:hover{background:var(--raised-2,#f3f4f6);color:var(--ink)}
+ @media(hover:hover){select option:hover{background:var(--raised-2,#f3f4f6);color:var(--ink)}}
  select option:focus-visible{outline:1px solid #91b7a3;outline-offset:-1px;background:var(--accent-bg,#f0f5f2);color:var(--accent-strong,#295b44)}
  select option:disabled{color:var(--subtle,#9ca3af);cursor:default}
  select option::checkmark{order:2;margin-left:auto;color:var(--accent,#295b44);font-size:14px}

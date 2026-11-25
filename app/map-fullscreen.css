@@ -3,7 +3,7 @@
 .map-viewport,.map-content{height:100%}
 .map-focus-header{display:none}
 #map-fullscreen{position:absolute;right:18px;bottom:18px;z-index:4;width:42px;height:42px;display:grid;place-items:center;border:1px solid #e3e5e9;border-radius:14px;background:#fff;color:#64666e;box-shadow:0 3px 12px #1518230a}
-#map-fullscreen:hover{background:#edf4ef;color:#295b44;border-color:#bdd0c6}
+@media(hover:hover){#map-fullscreen:hover{background:#edf4ef;color:#295b44;border-color:#bdd0c6}}
 #map-fullscreen[hidden]{display:none}
 .collapse-map-icon{display:none}
 .map-legend{right:76px;flex-wrap:wrap}

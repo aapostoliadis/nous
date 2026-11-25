@@ -23,7 +23,9 @@
     const run=()=>{apply(theme);update()};
     if(still.matches||theme===root.dataset.theme){run();return}
     if(document.startViewTransition){
-      const t=document.startViewTransition(run);
+      // Colour transitions must not run under the reveal, or the new theme smears in.
+      const t=document.startViewTransition(()=>{root.classList.add('theme-switching');run();getComputedStyle(root).opacity});
+      t.finished.finally(()=>root.classList.remove('theme-switching'));
       const r=Math.hypot(Math.max(x,innerWidth-x),Math.max(y,innerHeight-y));
       t.ready.then(()=>root.animate({clipPath:[`circle(0px at ${x}px ${y}px)`,`circle(${r}px at ${x}px ${y}px)`]},{duration:650,easing:'cubic-bezier(.4,0,.2,1)',pseudoElement:'::view-transition-new(root)'})).catch(()=>{});
       return;
