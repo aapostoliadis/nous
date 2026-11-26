@@ -116,7 +116,7 @@ Added 2026-11-25, from the audit of the areas the first pass skipped:
 
 Added 2026-11-25, while checking the interface review fixes (commit `9d58c80`). Neither is planned or changed:
 
-- Fixed: at a 300px viewport the page was 317px wide, because the Help button's right edge sat at 317px. Below 320px the top bar now uses a smaller logo and 12px side padding (`app/ux-refinements.css`), so the page is 300px wide at 300px and 319px wide at 319px. 320px and wider are unchanged. Still open: at 280px the page is 288px wide, so it scrolls sideways by 8px.
+- Fixed: at a 300px viewport the page was 317px wide, because the Help button's right edge sat at 317px. Below 320px the top bar now uses a smaller logo and 12px side padding (`app/ux-refinements.css`), so the page is 300px wide at 300px and 319px wide at 319px. 320px and wider are unchanged. Below 300px the logo and padding step down once more, so the page is 280px wide at 280px. The top row fits down to 273px.
 - The app reopens in Agents mode when that was the last mode used, because the mode is kept in browser storage. This is existing behaviour, not a bug. It matters for browser checks: confirm `document.body.className` does not contain `mode-agents` before measuring the workspace.
 
 ## Direction

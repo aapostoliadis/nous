@@ -216,5 +216,7 @@ dialog .field-hint{display:block;margin-top:6px;font-size:12px;font-weight:400;l
 @media(max-width:374px){.viewbar{padding-left:8px;padding-right:8px}.views{gap:2px}.views button{padding:0 3px}.top-actions .agents-toggle{padding:6px 9px}}
 /* Below 320px the logo and the three top actions need 299px. A smaller logo and tighter side padding keep the Help button on the page. */
 @media(max-width:319px){.topbar{padding:0 12px}.brand-artwork{--art-scale:.1}}
+/* Below 300px the same row needs another step down. It fits to 273px wide. */
+@media(max-width:299px){.topbar{padding:0 8px}.brand-artwork{--art-scale:.08}}
 /* Scrolling past the end of an overlay must not scroll the page behind it. */
 dialog,.review-panel,.inspector-scroll,.map-tray ul,.audio-result pre,.model-progress .ask-query{overscroll-behavior:contain}
