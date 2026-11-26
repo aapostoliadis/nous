@@ -116,7 +116,7 @@ Added 2026-11-25, from the audit of the areas the first pass skipped:
 
 Added 2026-11-25, while checking the interface review fixes (commit `9d58c80`). Neither is planned or changed:
 
-- At a 300px viewport the page is 317px wide, so it scrolls sideways by 17px. The top actions row causes it: the Help button's right edge sits at 317px. The width is the same on `432e508`, before the interface fixes, so they did not cause it. At 320px, the narrowest width the app is checked at, the page does not scroll sideways.
+- Fixed: at a 300px viewport the page was 317px wide, because the Help button's right edge sat at 317px. Below 320px the top bar now uses a smaller logo and 12px side padding (`app/ux-refinements.css`), so the page is 300px wide at 300px and 319px wide at 319px. 320px and wider are unchanged. Still open: at 280px the page is 288px wide, so it scrolls sideways by 8px.
 - The app reopens in Agents mode when that was the last mode used, because the mode is kept in browser storage. This is existing behaviour, not a bug. It matters for browser checks: confirm `document.body.className` does not contain `mode-agents` before measuring the workspace.
 
 ## Direction
