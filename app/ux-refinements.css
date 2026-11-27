@@ -220,3 +220,4 @@ dialog .field-hint{display:block;margin-top:6px;font-size:12px;font-weight:400;l
 @media(max-width:299px){.topbar{padding:0 8px}.brand-artwork{--art-scale:.08}}
 /* Scrolling past the end of an overlay must not scroll the page behind it. */
 dialog,.review-panel,.inspector-scroll,.map-tray ul,.audio-result pre,.model-progress .ask-query{overscroll-behavior:contain}
+.workspace-backup{display:flex;flex-wrap:wrap;gap:12px;margin-top:16px}
